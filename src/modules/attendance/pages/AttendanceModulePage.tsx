@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { dbRepository } from '@/src/services/db';
 import { AttendanceEntry, AttendanceSession, Student } from '@/src/types';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
-import { CalendarCheck, CheckCircle2, AlertCircle, Clock, ShieldCheck, Check, MessageSquare } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, AlertCircle, Clock, ShieldCheck, Check, MessageSquare, Filter } from 'lucide-react';
 import { WhatsAppModal } from '@/src/modules/notifications/components/WhatsAppModal';
 
 export const AttendanceModulePage: React.FC = () => {
@@ -15,8 +15,10 @@ export const AttendanceModulePage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState('2026-08-06');
   const [attendanceMap, setAttendanceMap] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'>>({});
 
-  const isPrincipalOrDean =
-    currentUser?.role === 'INSTITUTION_ADMIN' || currentUser?.role === 'BRANCH_ADMIN';
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
+  const isPrincipalOrDean = isDean || currentUser?.role === 'BRANCH_ADMIN';
+  const branches = dbRepository.getBranches();
+  const [branchFilter, setBranchFilter] = useState<string>('ALL');
 
   const sectionStudents = students;
 
@@ -43,10 +45,12 @@ export const AttendanceModulePage: React.FC = () => {
   };
 
   const handleSubmitAttendance = () => {
+    const expectedBranchId = isDean && branchFilter !== 'ALL' ? branchFilter : (currentUser?.branchId || 'branch-hyd-main');
+
     const session: AttendanceSession = {
       id: `att-session-${Date.now()}`,
       institutionId: 'inst-svic-01',
-      branchId: 'branch-hyd-main',
+      branchId: expectedBranchId,
       academicYearId: 'year-2026',
       programmeId: 'prog-mpc',
       batchId: 'batch-mpc-2026',
@@ -127,6 +131,22 @@ export const AttendanceModulePage: React.FC = () => {
             Record class section attendance, submit for review, finalize records, and send instant parent WhatsApp absence alerts.
           </p>
         </div>
+
+        {isDean && (
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+            >
+              <option value="ALL">All Branches</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {currentSession?.status === 'SUBMITTED' && isPrincipalOrDean && (
           <button

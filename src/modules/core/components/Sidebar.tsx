@@ -73,6 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { label: 'Marks Entry', path: '/marks-entry', icon: GraduationCap, badge: 'Entry' },
           { label: 'Circulars', path: '/circulars', icon: Megaphone },
           { label: 'Notifications', path: '/notifications', icon: MessageSquare },
+          { label: 'Failed Notifications', path: '/failed-notifications', icon: ShieldAlert, badge: 'Retry' },
         ];
 
       case 'OFFICE_STAFF':
@@ -93,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { label: 'Fees', path: '/parent/fees', icon: CreditCard },
           { label: 'Results', path: '/parent/results', icon: GraduationCap },
           { label: 'Circulars', path: '/parent/circulars', icon: Megaphone },
-          { label: 'Notifications', path: '/parent/notifications', icon: MessageSquare },
+          { label: 'Notification History', path: '/parent/notifications', icon: MessageSquare },
           { label: 'Documents', path: '/parent/documents', icon: FileText },
         ];
 

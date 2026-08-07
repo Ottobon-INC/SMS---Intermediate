@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { dbRepository } from '@/src/services/db';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
-import { Branch, Programme } from '@/src/types';
-import { Building, GitBranch, BookOpen, Plus, X, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Branch, Programme, User } from '@/src/types';
+import { Building, GitBranch, BookOpen, Plus, X, CheckCircle2, ShieldCheck, UserCircle } from 'lucide-react';
 
 export const InstitutionSetupPage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -11,10 +11,14 @@ export const InstitutionSetupPage: React.FC = () => {
   const institution = dbRepository.getInstitution();
   const [branches, setBranches] = useState<Branch[]>(() => dbRepository.getBranches());
   const [programmes, setProgrammes] = useState<Programme[]>(() => dbRepository.getProgrammes());
+  const [users, setUsers] = useState<User[]>(() => dbRepository.getUsers());
 
   // Modals
   const [showAddBranchModal, setShowAddBranchModal] = useState(false);
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+  const [showAssignPrincipalModal, setShowAssignPrincipalModal] = useState(false);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [notification, setNotification] = useState<string | null>(null);
 
   // Branch Form
@@ -83,6 +87,29 @@ export const InstitutionSetupPage: React.FC = () => {
     setYearLevel('First Year');
 
     triggerNotify(`New Academic Group "${newGroup.name}" added successfully!`);
+  };
+
+  const handleAssignPrincipal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBranchId || !selectedUserId) return;
+    const userToUpdate = users.find(u => u.id === selectedUserId);
+    if (userToUpdate) {
+      // Find if anyone else is principal of this branch, if so demote them to staff
+      const currentPrincipal = users.find(u => u.role === 'BRANCH_ADMIN' && u.branchId === selectedBranchId);
+      if (currentPrincipal && currentPrincipal.id !== userToUpdate.id) {
+        const confirmDemotion = window.confirm(`A Principal (${currentPrincipal.firstName} ${currentPrincipal.lastName}) already exists for this branch. Assigning a new one will demote them to OFFICE STAFF. Do you want to proceed?`);
+        if (!confirmDemotion) return;
+        
+        dbRepository.updateUser(currentPrincipal.id, { role: 'OFFICE_STAFF' });
+      }
+      
+      dbRepository.updateUser(userToUpdate.id, { role: 'BRANCH_ADMIN', branchId: selectedBranchId });
+      setUsers(dbRepository.getUsers());
+      setShowAssignPrincipalModal(false);
+      setSelectedBranchId(null);
+      setSelectedUserId('');
+      triggerNotify(`Principal assigned successfully.`);
+    }
   };
 
   return (
@@ -166,20 +193,46 @@ export const InstitutionSetupPage: React.FC = () => {
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {branches.map((b) => (
-            <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-start text-xs space-y-1">
-              <div>
-                <span className="font-bold text-slate-900 text-sm block">{b.name}</span>
-                <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-                  Code: <strong className="text-slate-700">{b.code}</strong> • Phone: {b.phone}
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">Address: {b.address}</p>
+          {branches.map((b) => {
+            const assignedPrincipal = users.find(u => u.role === 'BRANCH_ADMIN' && u.branchId === b.id);
+            return (
+              <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-start text-xs space-y-1">
+                <div>
+                  <span className="font-bold text-slate-900 text-sm block">{b.name}</span>
+                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                    Code: <strong className="text-slate-700">{b.code}</strong> • Phone: {b.phone}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-1">Address: {b.address}</p>
+                  <div className="mt-3 flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-slate-200 w-fit">
+                    <UserCircle className="w-4 h-4 text-slate-400" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Principal:</span>
+                    {assignedPrincipal ? (
+                      <span className="text-xs font-bold text-indigo-700">{assignedPrincipal.id} - {assignedPrincipal.fullName}</span>
+                    ) : (
+                      <span className="text-xs font-semibold text-amber-600">Unassigned</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] shrink-0">
+                    {b.status}
+                  </span>
+                  {isDean && (
+                    <button
+                      onClick={() => {
+                        setSelectedBranchId(b.id);
+                        setSelectedUserId(assignedPrincipal?.id || '');
+                        setShowAssignPrincipalModal(true);
+                      }}
+                      className="text-[10px] px-2.5 py-1.5 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg font-bold transition-colors"
+                    >
+                      Assign
+                    </button>
+                  )}
+                </div>
               </div>
-              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] shrink-0">
-                {b.status}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -376,6 +429,69 @@ export const InstitutionSetupPage: React.FC = () => {
                   className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 shadow-sm"
                 >
                   Create Group
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ASSIGN PRINCIPAL */}
+      {showAssignPrincipalModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                  <UserCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Assign Principal</h3>
+                  <p className="text-xs text-slate-500">Select a user to act as BRANCH_ADMIN</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAssignPrincipalModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignPrincipal} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Select User *</label>
+                <select
+                  required
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="" disabled>-- Select a user --</option>
+                  {users.filter(u => u.role !== 'INSTITUTION_ADMIN' && u.role !== 'STUDENT' && u.role !== 'GUARDIAN').map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.firstName} {u.lastName} ({u.role})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  Selecting a user will promote them to BRANCH_ADMIN for this campus and demote the current principal (if any) to STAFF.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignPrincipalModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-sm"
+                >
+                  Confirm Assignment
                 </button>
               </div>
             </form>

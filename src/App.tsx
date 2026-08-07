@@ -55,6 +55,7 @@ export const ROLE_ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/marks-entry',
     '/circulars',
     '/notifications',
+    '/failed-notifications',
   ],
   OFFICE_STAFF: [
     '/staff/dashboard',
@@ -240,6 +241,7 @@ const MainAppRouter: React.FC = () => {
       case '/circulars':
         return <CircularsModulePage />;
       case '/notifications':
+      case '/failed-notifications':
         return <NotificationCenterPage />;
       case '/institution':
       case '/branches':
