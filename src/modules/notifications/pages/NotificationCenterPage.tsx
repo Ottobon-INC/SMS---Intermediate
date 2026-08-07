@@ -1,30 +1,44 @@
 import React, { useState } from 'react';
-import { dbRepository } from '@/src/services/db';
+import { NotificationsService } from '@/src/modules/notifications/services/NotificationsService';
 import { NotificationEvent, NotificationEventType } from '@/src/types';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
 import { MessageSquare, CheckCheck, Clock, AlertCircle, RefreshCw, Smartphone, Filter } from 'lucide-react';
 import { WhatsAppPreview } from '@/src/modules/notifications/components/WhatsAppPreview';
 
 export const NotificationCenterPage: React.FC = () => {
-  const { triggerRefresh } = useAuth();
-  const [events, setEvents] = useState<NotificationEvent[]>(() => dbRepository.getNotificationEvents());
+  const { currentUser, triggerRefresh } = useAuth();
+  const [events, setEvents] = useState<NotificationEvent[]>(() => NotificationsService.getNotificationEvents());
   const [selectedEvent, setSelectedEvent] = useState<NotificationEvent | null>(events[0] || null);
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [branchFilter, setBranchFilter] = useState<string>('ALL'); // Dean-only filter
+
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
 
   const refreshData = () => {
-    setEvents(dbRepository.getNotificationEvents());
+    setEvents(NotificationsService.getNotificationEvents());
     triggerRefresh();
   };
 
   const handleRetryFailed = (eventId: string) => {
-    dbRepository.updateNotificationStatus(eventId, 'DELIVERED');
+    NotificationsService.updateNotificationStatus(eventId, 'DELIVERED');
     refreshData();
     alert('Notification re-sent and successfully delivered!');
   };
 
   const filteredEvents = events.filter((ev) => {
-    if (filterType === 'ALL') return true;
-    return ev.eventType === filterType;
+    if (filterType !== 'ALL' && ev.eventType !== filterType) return false;
+    
+    // RBAC: Non-Dean users only see events for their branch
+    if (!isDean && currentUser?.branchId && ev.branchId !== currentUser.branchId) {
+      return false;
+    }
+
+    // Dean branch filter
+    if (isDean && branchFilter !== 'ALL' && ev.branchId !== branchFilter) {
+      return false;
+    }
+
+    return true;
   });
 
   return (
@@ -50,23 +64,41 @@ export const NotificationCenterPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Log Table (7 cols) */}
         <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-4">
-          <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+          <div className="flex flex-wrap justify-between items-center gap-3 pb-3 border-b border-slate-100">
             <h3 className="font-bold text-slate-900 text-sm">Delivery Audit Stream ({filteredEvents.length})</h3>
 
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium"
-            >
-              <option value="ALL">All Event Types</option>
-              <option value="ATTENDANCE_ABSENCE">Attendance Absence</option>
-              <option value="PAYMENT_CONFIRMATION">Payment Receipt</option>
-              <option value="EXAM_RESULT_PUBLISHED">Result Published</option>
-              <option value="CIRCULAR_PUBLISHED">Circular</option>
-            </select>
+            <div className="flex items-center gap-2">
+              {isDean && (
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-slate-400" />
+                  <select
+                    value={branchFilter}
+                    onChange={(e) => setBranchFilter(e.target.value)}
+                    className="px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 outline-none"
+                  >
+                    <option value="ALL">All Branches (Institution)</option>
+                    <option value="branch-hyd-main">Hyderabad Main Campus</option>
+                    <option value="branch-vzg-north">Visakhapatnam North</option>
+                    <option value="branch-vja-east">Vijayawada East</option>
+                  </select>
+                </div>
+              )}
+
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-2.5 py-1 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 outline-none"
+              >
+                <option value="ALL">All Event Types</option>
+                <option value="ATTENDANCE_ABSENCE">Attendance Absence</option>
+                <option value="PAYMENT_CONFIRMATION">Payment Receipt</option>
+                <option value="EXAM_RESULT_PUBLISHED">Result Published</option>
+                <option value="CIRCULAR_PUBLISHED">Circular</option>
+              </select>
+            </div>
           </div>
 
-          <div className="space-y-2 text-xs">
+          <div className="space-y-2 text-xs h-[450px] overflow-y-auto pr-2">
             {filteredEvents.map((ev) => (
               <div
                 key={ev.id}
@@ -98,7 +130,7 @@ export const NotificationCenterPage: React.FC = () => {
                     {ev.resolvedMessage.replace(/\n/g, ' ')}
                   </p>
                   <span className="text-[10px] text-slate-400 block font-mono">
-                    Guardian: {ev.guardianMobile} • {new Date(ev.createdAt).toLocaleTimeString('en-IN')}
+                    Guardian: {ev.guardianMobile} • Branch: {ev.branchId} • {new Date(ev.createdAt).toLocaleTimeString('en-IN')}
                   </span>
                 </div>
 
@@ -108,13 +140,19 @@ export const NotificationCenterPage: React.FC = () => {
                       e.stopPropagation();
                       handleRetryFailed(ev.id);
                     }}
-                    className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold shrink-0"
+                    className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold shrink-0 hover:bg-rose-700 transition-colors shadow-sm"
                   >
                     Retry Delivery
                   </button>
                 )}
               </div>
             ))}
+            
+            {filteredEvents.length === 0 && (
+              <div className="text-center text-slate-500 py-10 font-medium">
+                No notifications found for the selected filters.
+              </div>
+            )}
           </div>
         </div>
 
@@ -132,13 +170,13 @@ export const NotificationCenterPage: React.FC = () => {
             guardianName="Mrs. Lakshmi Kumar"
             onSimulateDelivery={() => {
               if (selectedEvent) {
-                dbRepository.updateNotificationStatus(selectedEvent.id, 'DELIVERED');
+                NotificationsService.updateNotificationStatus(selectedEvent.id, 'DELIVERED');
                 refreshData();
               }
             }}
             onSimulateFailure={() => {
               if (selectedEvent) {
-                dbRepository.updateNotificationStatus(selectedEvent.id, 'FAILED');
+                NotificationsService.updateNotificationStatus(selectedEvent.id, 'FAILED');
                 refreshData();
               }
             }}
@@ -148,3 +186,4 @@ export const NotificationCenterPage: React.FC = () => {
     </div>
   );
 };
+

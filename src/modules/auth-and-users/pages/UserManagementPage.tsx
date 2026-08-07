@@ -3,7 +3,7 @@ import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
 import { dbRepository } from '@/src/services/db';
 import { User, UserRole } from '@/src/types';
 import { Modal } from '@/src/modules/core/components/Modal';
-import { UserPlus, Key, ShieldCheck, CheckCircle2, Lock, UserX, UserCheck } from 'lucide-react';
+import { UserPlus, Key, ShieldCheck, CheckCircle2, Lock, UserX, UserCheck, Edit2 } from 'lucide-react';
 
 export const UserManagementPage: React.FC = () => {
   const { currentUser, triggerRefresh } = useAuth();
@@ -12,19 +12,32 @@ export const UserManagementPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createdUserCreds, setCreatedUserCreds] = useState<{ user: User; pass: string } | null>(null);
 
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
   // Form state
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [role, setRole] = useState<UserRole>('OFFICE_STAFF');
   const [selectedStudentId, setSelectedStudentId] = useState('student-1');
+  const [selectedBranchId, setSelectedBranchId] = useState('branch-hyd-main');
+
+  // Edit Form State
+  const [editRole, setEditRole] = useState<UserRole>('OFFICE_STAFF');
+  const [editBranchId, setEditBranchId] = useState('branch-hyd-main');
 
   const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
   const isPrincipal = currentUser?.role === 'BRANCH_ADMIN';
 
-  // Branch filtering for Principal
+  const [branchFilter, setBranchFilter] = useState<string>('ALL');
+  const branches = dbRepository.getBranches();
+
+  // Branch filtering for Principal and Dean
   const displayedUsers = isPrincipal
     ? users.filter((u) => u.branchId === currentUser?.branchId)
+    : isDean && branchFilter !== 'ALL'
+    ? users.filter((u) => u.branchId === branchFilter)
     : users;
 
   const refreshUsers = () => {
@@ -32,14 +45,28 @@ export const UserManagementPage: React.FC = () => {
     triggerRefresh();
   };
 
+  const getRoleLevel = (r: UserRole) => {
+    if (r === 'INSTITUTION_ADMIN') return 4;
+    if (r === 'BRANCH_ADMIN') return 3;
+    if (r === 'OFFICE_STAFF') return 2;
+    return 1;
+  };
+
+  const canEditUser = (targetUser: User) => {
+    if (!currentUser) return false;
+    if (currentUser.id === targetUser.id) return false; // Cannot edit own
+    return getRoleLevel(currentUser.role) > getRoleLevel(targetUser.role);
+  };
+
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const tempPass = 'Demo@123';
+      const userBranchId = isDean ? selectedBranchId : (currentUser?.branchId || 'branch-hyd-main');
       const newUser: User = {
         id: `user-${Date.now()}`,
         institutionId: currentUser?.institutionId || 'inst-svic-01',
-        branchId: currentUser?.branchId || 'branch-hyd-main',
+        branchId: userBranchId,
         fullName,
         email,
         mobile,
@@ -102,6 +129,37 @@ export const UserManagementPage: React.FC = () => {
     }
   };
 
+  const handleOpenEditModal = (user: User) => {
+    setEditingUser(user);
+    setEditRole(user.role);
+    setEditBranchId(user.branchId || 'branch-hyd-main');
+    setShowEditModal(true);
+  };
+
+  const handleEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    try {
+      // Check for principal demotion warning
+      if (editRole === 'BRANCH_ADMIN') {
+        const currentPrincipal = users.find(u => u.role === 'BRANCH_ADMIN' && u.branchId === editBranchId);
+        if (currentPrincipal && currentPrincipal.id !== editingUser.id) {
+          const confirmDemotion = window.confirm(`A Principal (${currentPrincipal.fullName}) already exists for this branch. Assigning a new one will demote them to OFFICE STAFF. Do you want to proceed?`);
+          if (!confirmDemotion) return;
+          dbRepository.updateUser(currentPrincipal.id, { role: 'OFFICE_STAFF' }, currentUser?.role, currentUser?.branchId);
+        }
+      }
+
+      dbRepository.updateUser(editingUser.id, { role: editRole, branchId: editBranchId }, currentUser?.role, currentUser?.branchId);
+      refreshUsers();
+      setShowEditModal(false);
+      setEditingUser(null);
+      alert('User updated successfully.');
+    } catch (err: any) {
+      alert(err.message || 'Failed to update user');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -128,7 +186,25 @@ export const UserManagementPage: React.FC = () => {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center text-xs">
           <span className="font-semibold text-slate-700">Total System Users ({displayedUsers.length})</span>
-          <span className="text-slate-400">Main Campus – Hyderabad</span>
+          {isDean ? (
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-medium">Filter Branch:</span>
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-2 py-1 outline-none font-medium"
+              >
+                <option value="ALL">All Branches</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <span className="text-slate-400">
+              {branches.find(b => b.id === currentUser?.branchId)?.name || 'Main Campus – Hyderabad'}
+            </span>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -181,23 +257,36 @@ export const UserManagementPage: React.FC = () => {
                     {u.temporaryPassword || '••••••••'}
                   </td>
                   <td className="p-3.5 text-right space-x-2">
-                    <button
-                      onClick={() => handleResetPassword(u)}
-                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium"
-                      title="Reset Temporary Password"
-                    >
-                      Reset Pass
-                    </button>
-                    <button
-                      onClick={() => handleToggleStatus(u)}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-medium ${
-                        u.status === 'ACTIVE'
-                          ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-                          : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                      }`}
-                    >
-                      {u.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                    </button>
+                    {canEditUser(u) ? (
+                      <>
+                        <button
+                          onClick={() => handleOpenEditModal(u)}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium"
+                          title="Edit Role/Branch"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 inline-block -mt-0.5" />
+                        </button>
+                        <button
+                          onClick={() => handleResetPassword(u)}
+                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium"
+                          title="Reset Temporary Password"
+                        >
+                          Reset Pass
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(u)}
+                          className={`px-2 py-1 rounded-lg text-[11px] font-medium ${
+                            u.status === 'ACTIVE'
+                              ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          }`}
+                        >
+                          {u.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-medium italic px-2">No Permission</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -257,6 +346,21 @@ export const UserManagementPage: React.FC = () => {
               <option value="PARENT_GUARDIAN">Parent / Guardian</option>
             </select>
           </div>
+
+          {isDean && (
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Assign to Branch</label>
+              <select
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+              >
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {role === 'PARENT_GUARDIAN' && (
             <div>
@@ -334,6 +438,63 @@ export const UserManagementPage: React.FC = () => {
               Done & Close
             </button>
           </div>
+        </Modal>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit User Assignment">
+          <form onSubmit={handleEditUser} className="space-y-4 text-xs">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 mb-4">
+              <div className="font-semibold text-slate-900">{editingUser.fullName}</div>
+              <div className="text-[11px] text-slate-500">{editingUser.email}</div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Account Role</label>
+              <select
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value as UserRole)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+              >
+                {isDean && <option value="INSTITUTION_ADMIN">Dean / Institution Admin</option>}
+                {isDean && <option value="BRANCH_ADMIN">Principal / Campus Admin</option>}
+                <option value="OFFICE_STAFF">Office Staff / Class Teacher</option>
+                <option value="PARENT_GUARDIAN">Parent / Guardian</option>
+              </select>
+            </div>
+
+            {isDean && (editRole === 'BRANCH_ADMIN' || editRole === 'OFFICE_STAFF' || editRole === 'PARENT_GUARDIAN') && (
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Assign to Branch</label>
+                <select
+                  value={editBranchId}
+                  onChange={(e) => setEditBranchId(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs"
+                >
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold shadow-xs hover:bg-slate-800"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

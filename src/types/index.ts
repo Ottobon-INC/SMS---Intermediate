@@ -81,6 +81,8 @@ export interface Subject {
   programmeId: string;
   code: string;
   name: string;
+  maxMarks: number;
+  passMarks: number;
   status: 'ACTIVE' | 'INACTIVE';
 }
 

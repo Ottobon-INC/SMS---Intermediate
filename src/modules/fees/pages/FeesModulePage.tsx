@@ -3,7 +3,7 @@ import { dbRepository } from '@/src/services/db';
 import { FeeAssignment, FeePayment, Student } from '@/src/types';
 import { Modal } from '@/src/modules/core/components/Modal';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
-import { CreditCard, Plus, Receipt, Printer, CheckCircle2, MessageSquare, Download } from 'lucide-react';
+import { CreditCard, Plus, Receipt, Printer, CheckCircle2, MessageSquare, Download, Filter } from 'lucide-react';
 import { WhatsAppModal } from '@/src/modules/notifications/components/WhatsAppModal';
 
 export const FeesModulePage: React.FC = () => {
@@ -11,6 +11,11 @@ export const FeesModulePage: React.FC = () => {
   const [feeAssignments, setFeeAssignments] = useState<FeeAssignment[]>(() => dbRepository.getFeeAssignments());
   const [payments, setPayments] = useState<FeePayment[]>(() => dbRepository.getFeePayments());
   const students = dbRepository.getStudents();
+  const branches = dbRepository.getBranches();
+
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
+  const isPrincipal = currentUser?.role === 'BRANCH_ADMIN';
+  const [branchFilter, setBranchFilter] = useState<string>('ALL');
 
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -134,8 +139,26 @@ export const FeesModulePage: React.FC = () => {
     alert(`Assigned fee "${feeTitle}" (₹${feeAmount}) to ${targetStudents.length} student(s).`);
   };
 
-  const totalAssigned = feeAssignments.reduce((acc, f) => acc + f.assignedAmount, 0);
-  const totalCollected = payments.reduce((acc, p) => acc + p.amount, 0);
+  const filteredFeeAssignments = feeAssignments.filter((f) => {
+    if (isDean && branchFilter !== 'ALL') {
+      return f.branchId === branchFilter;
+    } else if (!isDean && currentUser?.branchId) {
+      return f.branchId === currentUser.branchId;
+    }
+    return true;
+  });
+
+  const filteredPayments = payments.filter((p) => {
+    if (isDean && branchFilter !== 'ALL') {
+      return p.branchId === branchFilter;
+    } else if (!isDean && currentUser?.branchId) {
+      return p.branchId === currentUser.branchId;
+    }
+    return true;
+  });
+
+  const totalAssigned = filteredFeeAssignments.reduce((acc, f) => acc + f.assignedAmount, 0);
+  const totalCollected = filteredPayments.reduce((acc, p) => acc + p.amount, 0);
 
   return (
     <div className="space-y-6">
@@ -149,6 +172,21 @@ export const FeesModulePage: React.FC = () => {
         </div>
 
         <div className="flex gap-2">
+          {isDean && (
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 mr-2">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+              >
+                <option value="ALL">All Branches</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             onClick={() => setShowAssignModal(true)}
             className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
@@ -181,7 +219,7 @@ export const FeesModulePage: React.FC = () => {
             ₹{totalCollected.toLocaleString('en-IN')}
           </div>
           <span className="text-xs text-emerald-600 font-semibold mt-0.5 block">
-            {payments.length} Receipts Issued
+            {filteredPayments.length} Receipts Issued
           </span>
         </div>
 
@@ -197,7 +235,7 @@ export const FeesModulePage: React.FC = () => {
       {/* Payment Receipts History Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center text-xs">
-          <span className="font-bold text-slate-800">Recent Payment Receipts ({payments.length})</span>
+          <span className="font-bold text-slate-800">Recent Payment Receipts ({filteredPayments.length})</span>
           <span className="text-slate-400">Official Institution Receipts</span>
         </div>
 
@@ -215,7 +253,7 @@ export const FeesModulePage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {payments.map((p) => {
+              {filteredPayments.map((p) => {
                 const st = students.find((s) => s.id === p.studentId);
                 return (
                   <tr key={p.id} className="hover:bg-slate-50">

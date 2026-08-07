@@ -1,108 +1,161 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { dbRepository } from '@/src/services/db';
+import { ExaminationsService } from '@/src/modules/examinations/services/ExaminationsService';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
-import { ResultVersion } from '@/src/types';
-import { GraduationCap, Save, ArrowLeft, MessageSquare, CheckCircle2, X, Send } from 'lucide-react';
+import { ResultVersion, Exam, Student, Section, Enrollment, Subject, Programme, Batch } from '@/src/types';
+import { GraduationCap, Save, ArrowLeft, MessageSquare, CheckCircle2, X, Send, AlertTriangle, FileText } from 'lucide-react';
+import { Modal } from '@/src/modules/core/components/Modal';
 
 export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const { currentUser, triggerRefresh } = useAuth();
-  const students = dbRepository.getStudents();
-  const exams = dbRepository.getExams();
-
+  
+  const [exams, setExams] = useState<Exam[]>(() => ExaminationsService.getExams());
+  const [allStudents] = useState<Student[]>(() => ExaminationsService.getStudents());
+  const [sections] = useState<Section[]>(() => ExaminationsService.getSections());
+  const [batches] = useState<Batch[]>(() => ExaminationsService.getBatches());
+  const [enrollments] = useState<Enrollment[]>(() => ExaminationsService.getEnrollments());
+  const [allSubjects] = useState<Subject[]>(() => ExaminationsService.getSubjects());
+  const [programmes] = useState<Programme[]>(() => ExaminationsService.getProgrammes());
+  
   const [selectedExamId, setSelectedExamId] = useState(exams[0]?.id || 'exam-1');
-  const [selectedSection, setSelectedSection] = useState('MPC-A');
+  const [selectedSectionId, setSelectedSectionId] = useState(sections[0]?.id || 'sec-mpc-a-1');
 
   const selectedExam = exams.find((e) => e.id === selectedExamId) || exams[0];
-
-  const sectionStudents = students;
-
-  // Marks state map: studentId -> { math: number, phy: number, chem: number, eng: number }
-  const [marksState, setMarksState] = useState<
-    Record<string, { math: number; phy: number; chem: number; eng: number }>
-  >({
-    'student-1': { math: 88, phy: 76, chem: 72, eng: 80 },
-    'student-2': { math: 92, phy: 84, chem: 80, eng: 85 },
-    'student-3': { math: 65, phy: 58, chem: 60, eng: 70 },
+  const relevantSections = sections.filter(sec => {
+    const batch = batches.find(b => b.id === sec.batchId);
+    return batch?.programmeId === selectedExam?.programmeId;
   });
+
+  useEffect(() => {
+    const currentValid = relevantSections.find(s => s.id === selectedSectionId);
+    if (!currentValid && relevantSections.length > 0) {
+      setSelectedSectionId(relevantSections[0].id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedExamId]);
+
+  const sectionEnrollments = enrollments.filter(e => e.sectionId === selectedSectionId && e.academicYearId === 'ay-2026-2027');
+  const sectionStudentIds = sectionEnrollments.map(e => e.studentId);
+  const sectionStudents = allStudents.filter(s => sectionStudentIds.includes(s.id));
+
+  const currentSection = sections.find(s => s.id === selectedSectionId);
+  const currentBatch = batches.find(b => b.id === currentSection?.batchId);
+  const currentProgramme = programmes.find(p => p.id === currentBatch?.programmeId);
+  const sectionSubjects = allSubjects.filter(sub => sub.programmeId === currentProgramme?.id);
+
+  const totalMaxMarks = sectionSubjects.reduce((sum, sub) => sum + sub.maxMarks, 0);
+
+  // Marks state map: studentId -> { subjectId: number }
+  const [marksState, setMarksState] = useState<Record<string, Record<string, number>>>({});
+
+  // Initialize marks state from DB
+  useEffect(() => {
+    const existingMarks = ExaminationsService.getMarks(selectedExamId);
+    const newState: Record<string, Record<string, number>> = {};
+    
+    // Default fallback if no marks exist
+    sectionStudents.forEach(st => {
+      newState[st.id] = {};
+      sectionSubjects.forEach(sub => {
+        newState[st.id][sub.id] = 0; 
+      });
+    });
+
+    existingMarks.forEach(m => {
+      if (newState[m.studentId]) {
+        newState[m.studentId][m.subjectId] = m.marksObtained;
+      }
+    });
+
+    setMarksState(newState);
+  }, [selectedExamId, selectedSectionId]); // Refetch when exam or section changes
 
   // Modal for WhatsApp Preview
   const [showWhatsAppPreviewModal, setShowWhatsAppPreviewModal] = useState(false);
   const [previewMessage, setPreviewMessage] = useState<string>('');
   const [previewStudentName, setPreviewStudentName] = useState<string>('');
 
-  const handleMarkChange = (studentId: string, subjectKey: 'math' | 'phy' | 'chem' | 'eng', val: number) => {
+  // Correction Mode Modal
+  const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
+  const [correctionData, setCorrectionData] = useState<{
+    studentId: string;
+    subjectId: string;
+    oldVal: number;
+    newVal: number;
+  } | null>(null);
+  const [correctionReason, setCorrectionReason] = useState('');
+
+  const [previewReportCardStudent, setPreviewReportCardStudent] = useState<Student | null>(null);
+
+  const isStaff = currentUser?.role === 'OFFICE_STAFF' || currentUser?.role === 'TEACHER';
+  const isPrincipal = currentUser?.role === 'BRANCH_ADMIN';
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
+
+  const handleMarkChange = (studentId: string, subjectId: string, val: number, maxMarks: number) => {
+    let finalVal = val;
+    if (finalVal > maxMarks) finalVal = maxMarks;
+    if (finalVal < 0) finalVal = 0;
+
+    // If published, trigger correction mode instead of direct update
+    if (selectedExam?.status === 'PUBLISHED') {
+      const oldVal = marksState[studentId]?.[subjectId] || 0;
+      if (oldVal !== finalVal) {
+        setCorrectionData({ studentId, subjectId, oldVal, newVal: finalVal });
+        setCorrectionReason('');
+        setCorrectionModalOpen(true);
+      }
+      return;
+    }
+
     setMarksState((prev) => ({
       ...prev,
       [studentId]: {
-        ...(prev[studentId] || { math: 70, phy: 70, chem: 70, eng: 70 }),
-        [subjectKey]: val,
+        ...(prev[studentId] || {}),
+        [subjectId]: finalVal,
       },
     }));
   };
 
-  const handleSubmitAndPublishMarks = () => {
-    const examTitle = selectedExam?.name || 'Academic Assessment';
+  const handleApplyCorrection = () => {
+    if (!correctionData || !correctionReason.trim()) return;
 
-    // 1. Mark exam as PUBLISHED
-    dbRepository.updateExam(selectedExamId, {
-      status: 'PUBLISHED',
+    const { studentId, subjectId, oldVal, newVal } = correctionData;
+
+    // 1. Update Marks State
+    setMarksState((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...(prev[studentId] || {}),
+        [subjectId]: newVal,
+      },
+    }));
+
+    // 2. Audit Log
+    dbRepository.addAuditEvent({
+      id: `audit-${Date.now()}`,
+      institutionId: currentUser?.institutionId || 'inst-svic-01',
+      branchId: currentUser?.branchId || 'branch-hyd-main',
+      userId: currentUser?.id || 'user-1',
+      action: 'UPDATE',
+      resourceType: 'Mark',
+      resourceId: `mark-${studentId}-${subjectId}`,
+      details: `Corrected mark for ${subjectId} from ${oldVal} to ${newVal}. Reason: ${correctionReason}`,
+      createdAt: new Date().toISOString()
     });
 
-    // 2. Save Result Versions for students
-    sectionStudents.forEach((st) => {
-      const marks = marksState[st.id] || { math: 75, phy: 70, chem: 72, eng: 78 };
-      const total = marks.math + marks.phy + marks.chem + marks.eng;
-      const pct = Math.round((total / 400) * 100);
-      const isPass = pct >= 35;
+    setCorrectionModalOpen(false);
+    setCorrectionData(null);
+  };
 
-      const newVersion: ResultVersion = {
-        id: `rv-${st.id}-${Date.now()}`,
-        resultPublicationId: `pub-${selectedExamId}`,
-        studentId: st.id,
-        version: 1,
-        subjectResults: [
-          { subjectId: 'sub-m1a', subjectName: 'Mathematics-1A', marksObtained: marks.math, maximumMarks: 100, passMarks: 35, isPass: marks.math >= 35 },
-          { subjectId: 'sub-phy', subjectName: 'Physics', marksObtained: marks.phy, maximumMarks: 100, passMarks: 35, isPass: marks.phy >= 35 },
-          { subjectId: 'sub-chem', subjectName: 'Chemistry', marksObtained: marks.chem, maximumMarks: 100, passMarks: 35, isPass: marks.chem >= 35 },
-          { subjectId: 'sub-eng', subjectName: 'English', marksObtained: marks.eng, maximumMarks: 100, passMarks: 35, isPass: marks.eng >= 35 },
-        ],
-        totalMarks: total,
-        maximumMarks: 400,
-        percentage: pct,
-        grade: pct >= 75 ? 'Distinction' : pct >= 60 ? 'First Class' : 'Second Class',
-        resultStatus: isPass ? 'Pass' : 'Fail',
-        createdAt: new Date().toISOString(),
-      };
-
-      dbRepository.addResultVersion(newVersion);
-
-      // 3. Queue WhatsApp Notification
-      const waMsg = `Dear Parent,\n\nThe result for ${st.firstName} ${st.lastName} in ${examTitle} has been published.\n\n📊 Marks Breakdown:\n• Maths: ${marks.math}/100\n• Physics: ${marks.phy}/100\n• Chemistry: ${marks.chem}/100\n• English: ${marks.eng}/100\n\n🏆 Total: ${total} / 400 (${pct}%)\nStatus: ${isPass ? 'PASS ✅' : 'FAIL ❌'}\n\nView full digital report card in SVIC Parent Portal.\n\nRegards,\nSri Vignan Intermediate College`;
-
-      dbRepository.addNotificationEvent({
-        id: `notif-exam-${st.id}-${Date.now()}`,
-        institutionId: 'inst-svic-01',
-        branchId: 'branch-hyd-main',
-        studentId: st.id,
-        guardianId: 'guard-1',
-        sourceModule: 'Examinations',
-        sourceRecordId: selectedExamId,
-        recipientMobile: '9000020001',
-        eventType: 'EXAM_RESULT_PUBLISHED',
-        resolvedMessage: waMsg,
-        status: 'DELIVERED',
-        createdAt: new Date().toISOString(),
-        retryCount: 0,
-      });
-
-      if (st.id === 'student-1') {
-        setPreviewStudentName(`${st.firstName} ${st.lastName}`);
-        setPreviewMessage(waMsg);
-      }
+  const handleSubmitMarks = (newStatus: 'SUBMITTED' | 'APPROVED') => {
+    // 1. Update Exam Status
+    ExaminationsService.updateExam(selectedExamId, {
+      status: newStatus,
     });
 
     triggerRefresh();
-    setShowWhatsAppPreviewModal(true);
+    alert(`Marks have been ${newStatus.toLowerCase()} successfully!`);
+    if (onBack) onBack();
   };
 
   return (
@@ -112,7 +165,7 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
         <div>
           <h1 className="text-xl font-bold text-slate-900">Class Subject Marks Entry</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Input assessment scores per subject for class students, calculate grades, publish to parent portal, and generate WhatsApp alerts.
+            Input assessment scores per subject for class students, calculate grades, and submit for approval.
           </p>
         </div>
 
@@ -146,14 +199,13 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
         <div>
           <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Select Section</label>
           <select
-            value={selectedSection}
-            onChange={(e) => setSelectedSection(e.target.value)}
+            value={selectedSectionId}
+            onChange={(e) => setSelectedSectionId(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 outline-none"
           >
-            <option value="MPC-A">MPC-A (First Year)</option>
-            <option value="MPC-B">MPC-B (First Year)</option>
-            <option value="BiPC-A">BiPC-A (First Year)</option>
-            <option value="CEC-A">CEC-A (First Year)</option>
+            {relevantSections.map(sec => (
+              <option key={sec.id} value={sec.id}>{sec.name}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -166,20 +218,20 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
               <tr>
                 <th className="p-3">Admission No</th>
                 <th className="p-3">Student Name</th>
-                <th className="p-3">Maths-1A (100)</th>
-                <th className="p-3">Physics (100)</th>
-                <th className="p-3">Chemistry (100)</th>
-                <th className="p-3">English (100)</th>
-                <th className="p-3 text-center">Total / 400</th>
+                {sectionSubjects.map(sub => (
+                  <th key={sub.id} className="p-3">{sub.name} ({sub.maxMarks})</th>
+                ))}
+                <th className="p-3 text-center">Total / {totalMaxMarks}</th>
                 <th className="p-3 text-center">Result</th>
+                <th className="p-3 text-center">Report Card</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sectionStudents.map((st) => {
-                const marks = marksState[st.id] || { math: 75, phy: 70, chem: 72, eng: 78 };
-                const total = marks.math + marks.phy + marks.chem + marks.eng;
-                const pct = Math.round((total / 400) * 100);
-                const isPass = pct >= 35;
+                const marks = marksState[st.id] || {};
+                const total = sectionSubjects.reduce((sum, sub) => sum + (marks[sub.id] || 0), 0);
+                const pct = totalMaxMarks > 0 ? Math.round((total / totalMaxMarks) * 100) : 0;
+                const isPass = pct >= 35; // Example passing criteria
 
                 return (
                   <tr key={st.id} className="hover:bg-slate-50">
@@ -187,46 +239,18 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
                     <td className="p-3 font-semibold text-slate-800">
                       {st.firstName} {st.lastName}
                     </td>
-                    <td className="p-3">
-                      <input
-                        type="number"
-                        max={100}
-                        min={0}
-                        value={marks.math}
-                        onChange={(e) => handleMarkChange(st.id, 'math', Number(e.target.value))}
-                        className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-bold text-xs"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input
-                        type="number"
-                        max={100}
-                        min={0}
-                        value={marks.phy}
-                        onChange={(e) => handleMarkChange(st.id, 'phy', Number(e.target.value))}
-                        className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-bold text-xs"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input
-                        type="number"
-                        max={100}
-                        min={0}
-                        value={marks.chem}
-                        onChange={(e) => handleMarkChange(st.id, 'chem', Number(e.target.value))}
-                        className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-bold text-xs"
-                      />
-                    </td>
-                    <td className="p-3">
-                      <input
-                        type="number"
-                        max={100}
-                        min={0}
-                        value={marks.eng}
-                        onChange={(e) => handleMarkChange(st.id, 'eng', Number(e.target.value))}
-                        className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-bold text-xs"
-                      />
-                    </td>
+                    {sectionSubjects.map(sub => (
+                      <td key={sub.id} className="p-3">
+                        <input
+                          type="number"
+                          max={sub.maxMarks}
+                          min={0}
+                          value={marks[sub.id] !== undefined ? marks[sub.id] : ''}
+                          onChange={(e) => handleMarkChange(st.id, sub.id, Number(e.target.value), sub.maxMarks)}
+                          className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-bold text-xs"
+                        />
+                      </td>
+                    ))}
                     <td className="p-3 text-center font-bold text-slate-900">
                       {total} <span className="text-[10px] text-slate-400 font-normal">({pct}%)</span>
                     </td>
@@ -239,6 +263,14 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
                         {isPass ? 'PASS' : 'FAIL'}
                       </span>
                     </td>
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => setPreviewReportCardStudent(st)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1 w-full"
+                      >
+                        <FileText className="w-3 h-3" /> Preview
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -248,82 +280,162 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
 
         <div className="pt-4 flex flex-wrap justify-between items-center gap-3">
           <div className="text-xs text-slate-500">
-            💡 Submitting marks publishes digital report cards directly to the <strong>Parent Portal</strong> and triggers <strong>WhatsApp SMS notifications</strong>.
+            {selectedExam?.status === 'PUBLISHED' ? (
+              <span>ℹ️ This exam is <strong>PUBLISHED</strong>. Editing a mark will require a correction reason.</span>
+            ) : (
+              <span>ℹ️ Ensure all marks are correct before submitting to the Principal.</span>
+            )}
           </div>
 
-          <button
-            onClick={handleSubmitAndPublishMarks}
-            className="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all"
-            id="save-publish-marks-button"
-          >
-            <Save className="w-4 h-4 text-emerald-300" /> Save & Publish Marks to Parent Portal
-          </button>
+          <div className="flex gap-2">
+            {isStaff && selectedExam?.status === 'DRAFT' && (
+              <button
+                onClick={() => handleSubmitMarks('SUBMITTED')}
+                className="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all"
+              >
+                <Save className="w-4 h-4 text-emerald-300" /> Submit to Principal
+              </button>
+            )}
+
+            {isPrincipal && selectedExam?.status === 'SUBMITTED' && (
+              <button
+                onClick={() => handleSubmitMarks('APPROVED')}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-2 transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4 text-indigo-300" /> Approve Marks
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* WHATSAPP MESSAGE PREVIEW MODAL */}
-      {showWhatsAppPreviewModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Marks Published & WhatsApp Dispatched</h3>
-                  <p className="text-xs text-slate-500">Live preview of automated parent WhatsApp notification</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowWhatsAppPreviewModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* WhatsApp Chat Simulation Card */}
-            <div className="bg-emerald-950/90 p-4 rounded-2xl border border-emerald-800 text-xs space-y-3 font-sans shadow-inner">
-              <div className="flex justify-between items-center border-b border-emerald-800/60 pb-2">
-                <div className="flex items-center gap-2 text-emerald-100 font-bold">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  WhatsApp Official Alert Engine
-                </div>
-                <span className="text-[10px] text-emerald-300 font-mono">+91 90000 20001 (Parent)</span>
-              </div>
-
-              {/* Message Bubble */}
-              <div className="bg-emerald-900/90 text-emerald-50 p-3.5 rounded-2xl border border-emerald-700/50 space-y-2 whitespace-pre-wrap font-mono leading-relaxed text-[11px] shadow-sm">
-                {previewMessage}
-                <div className="flex justify-end items-center gap-1 text-[9px] text-emerald-300 font-mono mt-1">
-                  <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  <span className="text-teal-300 font-bold">✓✓ Delivered</span>
-                </div>
+      {/* CORRECTION MODE MODAL */}
+      <Modal
+        isOpen={correctionModalOpen}
+        onClose={() => setCorrectionModalOpen(false)}
+        title="Marks Correction Mode"
+        maxWidth="md"
+      >
+        {correctionData && (
+          <div className="space-y-4">
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-xs flex gap-2">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600" />
+              <div>
+                <strong>Warning:</strong> These results are already PUBLISHED. 
+                Changing a mark will generate a new Result Version and log this action for auditing.
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                Report card for <strong>{selectedExam?.name}</strong> is now live in the Parent Portal!
-              </span>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Old Mark</span>
+                <span className="font-mono text-slate-900 font-bold">{correctionData.oldVal}</span>
+              </div>
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                <span className="block text-[10px] font-bold text-emerald-600 uppercase mb-1">New Mark</span>
+                <span className="font-mono text-emerald-900 font-bold">{correctionData.newVal}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Mandatory Reason for Correction *</label>
+              <textarea
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="e.g., Revaluation request, totaling error, etc."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-amber-500 outline-none resize-none h-24"
+                required
+              />
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => {
-                  setShowWhatsAppPreviewModal(false);
-                  if (onBack) onBack();
-                }}
-                className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800"
+                onClick={() => setCorrectionModalOpen(false)}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 text-xs"
               >
-                Done & Return to Exams
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyCorrection}
+                disabled={!correctionReason.trim()}
+                className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirm Correction
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
+
+      {/* REPORT CARD PREVIEW MODAL */}
+      <Modal
+        isOpen={!!previewReportCardStudent}
+        onClose={() => setPreviewReportCardStudent(null)}
+        title="Report Card Preview"
+        maxWidth="lg"
+      >
+        {previewReportCardStudent && (
+          <div className="space-y-6">
+            <div className="text-center space-y-1 border-b border-slate-200 pb-4">
+              <h2 className="font-black text-xl text-slate-900">SRI VIGNAN INTERMEDIATE COLLEGE</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase">{selectedExam?.name} - {currentProgramme?.name}</p>
+            </div>
+
+            <div className="flex justify-between text-xs text-slate-700">
+              <div>
+                <p><strong>Student Name:</strong> {previewReportCardStudent.firstName} {previewReportCardStudent.lastName}</p>
+                <p><strong>Admission No:</strong> {previewReportCardStudent.admissionNumber}</p>
+              </div>
+              <div className="text-right">
+                <p><strong>Section:</strong> {currentSection?.name}</p>
+                <p><strong>Date:</strong> {selectedExam?.examDate}</p>
+              </div>
+            </div>
+
+            <table className="w-full text-left text-sm text-slate-700 border border-slate-200">
+              <thead className="bg-slate-100 font-bold text-slate-900 border-b border-slate-200">
+                <tr>
+                  <th className="p-2 border-r border-slate-200">Subject</th>
+                  <th className="p-2 border-r border-slate-200 text-center">Max Marks</th>
+                  <th className="p-2 text-center">Marks Obtained</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {sectionSubjects.map(sub => {
+                  const marks = marksState[previewReportCardStudent.id]?.[sub.id] || 0;
+                  return (
+                    <tr key={sub.id}>
+                      <td className="p-2 border-r border-slate-200">{sub.name}</td>
+                      <td className="p-2 border-r border-slate-200 text-center">{sub.maxMarks}</td>
+                      <td className="p-2 text-center font-bold">{marks}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot className="bg-slate-50 font-bold text-slate-900 border-t border-slate-200">
+                <tr>
+                  <td className="p-2 border-r border-slate-200">Total</td>
+                  <td className="p-2 border-r border-slate-200 text-center">{totalMaxMarks}</td>
+                  <td className="p-2 text-center text-teal-700">
+                    {sectionSubjects.reduce((sum, sub) => sum + (marksState[previewReportCardStudent.id]?.[sub.id] || 0), 0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+            
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={() => setPreviewReportCardStudent(null)}
+                className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs shadow-sm hover:bg-slate-800"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 };
+

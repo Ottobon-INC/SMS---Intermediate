@@ -89,15 +89,15 @@ export const seedSections: Section[] = [
 ];
 
 export const seedSubjects: Subject[] = [
-  { id: 'sub-math', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'MATH', name: 'Mathematics', status: 'ACTIVE' },
-  { id: 'sub-phy', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'PHY', name: 'Physics', status: 'ACTIVE' },
-  { id: 'sub-chem', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'CHEM', name: 'Chemistry', status: 'ACTIVE' },
-  { id: 'sub-bot', institutionId: INSTITUTION_ID, programmeId: 'prog-bipc', code: 'BOT', name: 'Botany', status: 'ACTIVE' },
-  { id: 'sub-zoo', institutionId: INSTITUTION_ID, programmeId: 'prog-bipc', code: 'ZOO', name: 'Zoology', status: 'ACTIVE' },
-  { id: 'sub-eng', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'ENG', name: 'English', status: 'ACTIVE' },
-  { id: 'sub-eco', institutionId: INSTITUTION_ID, programmeId: 'prog-mec', code: 'ECO', name: 'Economics', status: 'ACTIVE' },
-  { id: 'sub-com', institutionId: INSTITUTION_ID, programmeId: 'prog-mec', code: 'COM', name: 'Commerce', status: 'ACTIVE' },
-  { id: 'sub-civ', institutionId: INSTITUTION_ID, programmeId: 'prog-cec', code: 'CIV', name: 'Civics', status: 'ACTIVE' },
+  { id: 'sub-math', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'MATH', name: 'Mathematics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-phy', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'PHY', name: 'Physics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-chem', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'CHEM', name: 'Chemistry', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-bot', institutionId: INSTITUTION_ID, programmeId: 'prog-bipc', code: 'BOT', name: 'Botany', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-zoo', institutionId: INSTITUTION_ID, programmeId: 'prog-bipc', code: 'ZOO', name: 'Zoology', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-eng', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'ENG', name: 'English', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-eco', institutionId: INSTITUTION_ID, programmeId: 'prog-mec', code: 'ECO', name: 'Economics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-com', institutionId: INSTITUTION_ID, programmeId: 'prog-mec', code: 'COM', name: 'Commerce', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-civ', institutionId: INSTITUTION_ID, programmeId: 'prog-cec', code: 'CIV', name: 'Civics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
 ];
 
 export const seedGuardians: Guardian[] = [
