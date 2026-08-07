@@ -1,0 +1,6 @@
+{
+  "name": "SMS for Intermediate",
+  "description": "Student Management System for Intermediate Colleges in AP & Telangana with Student Import, Fee Ledger, Attendance, Exam Results, Circulars, WhatsApp Previews, and RBAC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,388 @@
+import React, { useState } from 'react';
+import { dbRepository } from '@/src/services/db';
+import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
+import { Branch, Programme } from '@/src/types';
+import { Building, GitBranch, BookOpen, Plus, X, CheckCircle2, ShieldCheck } from 'lucide-react';
+
+export const InstitutionSetupPage: React.FC = () => {
+  const { currentUser } = useAuth();
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
+
+  const institution = dbRepository.getInstitution();
+  const [branches, setBranches] = useState<Branch[]>(() => dbRepository.getBranches());
+  const [programmes, setProgrammes] = useState<Programme[]>(() => dbRepository.getProgrammes());
+
+  // Modals
+  const [showAddBranchModal, setShowAddBranchModal] = useState(false);
+  const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Branch Form
+  const [branchName, setBranchName] = useState('');
+  const [branchCode, setBranchCode] = useState('');
+  const [branchPhone, setBranchPhone] = useState('');
+  const [branchAddress, setBranchAddress] = useState('');
+
+  // Group / Programme Form
+  const [groupName, setGroupName] = useState('');
+  const [groupCode, setGroupCode] = useState('');
+  const [yearLevel, setYearLevel] = useState<'First Year' | 'Second Year'>('First Year');
+
+  const triggerNotify = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleCreateBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!branchName.trim() || !branchCode.trim()) return;
+
+    const newBranch: Branch = {
+      id: `branch-${Date.now()}`,
+      institutionId: institution.id,
+      name: branchName.trim(),
+      code: branchCode.trim().toUpperCase(),
+      phone: branchPhone.trim() || '+91 9876543210',
+      address: branchAddress.trim() || 'Hyderabad Campus, Telangana',
+      status: 'ACTIVE',
+    };
+
+    dbRepository.addBranch(newBranch);
+    setBranches(dbRepository.getBranches());
+    setShowAddBranchModal(false);
+
+    // Reset Form
+    setBranchName('');
+    setBranchCode('');
+    setBranchPhone('');
+    setBranchAddress('');
+
+    triggerNotify(`New Branch "${newBranch.name}" created successfully!`);
+  };
+
+  const handleCreateGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupName.trim() || !groupCode.trim()) return;
+
+    const newGroup: Programme = {
+      id: `prog-${Date.now()}`,
+      institutionId: institution.id,
+      name: groupName.trim(),
+      code: groupCode.trim().toUpperCase(),
+      yearLevel: yearLevel,
+      status: 'ACTIVE',
+    };
+
+    dbRepository.addProgramme(newGroup);
+    setProgrammes(dbRepository.getProgrammes());
+    setShowAddGroupModal(false);
+
+    // Reset Form
+    setGroupName('');
+    setGroupCode('');
+    setYearLevel('First Year');
+
+    triggerNotify(`New Academic Group "${newGroup.name}" added successfully!`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center justify-between text-xs font-semibold shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>{notification}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="text-emerald-600 hover:text-emerald-800">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Institution & Academic Structure Setup</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Configure campuses, academic terms, streams (MPC, BiPC, CEC), and Board of Intermediate Education guidelines.
+          </p>
+        </div>
+
+        {isDean && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAddBranchModal(true)}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition-all"
+              id="dean-add-branch-button"
+            >
+              <Plus className="w-4 h-4" /> Add Branch
+            </button>
+            <button
+              onClick={() => setShowAddGroupModal(true)}
+              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition-all"
+              id="dean-add-group-button"
+            >
+              <Plus className="w-4 h-4" /> Add Group / Combination
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Institution Info Card */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+          <Building className="w-4 h-4 text-purple-600" /> Institution Metadata
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono bg-slate-50 p-4 rounded-2xl border border-slate-200">
+          <div>
+            <span className="text-slate-400 block text-[10px]">Institution Name:</span>
+            <strong className="text-slate-900 font-sans">{institution.name}</strong>
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Short Code:</span>
+            <strong className="text-slate-900">{institution.code}</strong>
+          </div>
+          <div>
+            <span className="text-slate-400 block text-[10px]">Board Affiliation:</span>
+            <strong className="text-slate-900 font-sans">{institution.board}</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Campuses */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <GitBranch className="w-4 h-4 text-indigo-600" /> Active Campus Branches ({branches.length})
+          </h3>
+          {isDean && (
+            <button
+              onClick={() => setShowAddBranchModal(true)}
+              className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Branch
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {branches.map((b) => (
+            <div key={b.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-between items-start text-xs space-y-1">
+              <div>
+                <span className="font-bold text-slate-900 text-sm block">{b.name}</span>
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  Code: <strong className="text-slate-700">{b.code}</strong> • Phone: {b.phone}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1">Address: {b.address}</p>
+              </div>
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] shrink-0">
+                {b.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Academic Groups / Streams */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-teal-600" /> Academic Streams & Groups ({programmes.length})
+          </h3>
+          {isDean && (
+            <button
+              onClick={() => setShowAddGroupModal(true)}
+              className="text-xs text-teal-600 font-bold hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Group
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          {programmes.map((p) => (
+            <div key={p.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+              <div className="flex justify-between items-start">
+                <span className="font-bold text-slate-900 text-sm block">{p.name}</span>
+                <span className="px-2 py-0.5 bg-teal-100 text-teal-800 font-mono font-bold text-[10px] rounded">
+                  {p.code}
+                </span>
+              </div>
+              <p className="text-slate-500 text-[11px]">Level: {p.yearLevel}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* MODAL: ADD BRANCH */}
+      {showAddBranchModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                  <GitBranch className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Create New Campus Branch</h3>
+                  <p className="text-xs text-slate-500">Add a new college campus under {institution.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddBranchModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBranch} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Branch Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. SVIC - Gachibowli Campus"
+                  value={branchName}
+                  onChange={(e) => setBranchName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Short Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. SVIC-GC"
+                    value={branchCode}
+                    onChange={(e) => setBranchCode(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +91 9876543210"
+                    value={branchPhone}
+                    onChange={(e) => setBranchPhone(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Campus Address</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Plot No 42, Gachibowli Main Road, Hyderabad"
+                  value={branchAddress}
+                  onChange={(e) => setBranchAddress(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddBranchModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow-sm"
+                >
+                  Create Branch
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD ACADEMIC GROUP / COMBINATION */}
+      {showAddGroupModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-teal-100 text-teal-700 rounded-xl">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Create Academic Group / Stream</h3>
+                  <p className="text-xs text-slate-500">Define a subject group or specialization</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddGroupModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateGroup} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Group Name / Subjects *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. MPC (Maths, Physics, Chemistry)"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Group Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. MPC or CEC"
+                    value={groupCode}
+                    onChange={(e) => setGroupCode(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 outline-none uppercase font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Year Level</label>
+                  <select
+                    value={yearLevel}
+                    onChange={(e) => setYearLevel(e.target.value as 'First Year' | 'Second Year')}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 outline-none"
+                  >
+                    <option value="First Year">First Year</option>
+                    <option value="Second Year">Second Year</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddGroupModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 shadow-sm"
+                >
+                  Create Group
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
