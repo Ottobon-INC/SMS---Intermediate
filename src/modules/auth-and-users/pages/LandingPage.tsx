@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   School,
   FileSpreadsheet,
@@ -8,10 +8,11 @@ import {
   Users,
   Building,
   UserCheck,
-  CheckCircle,
   Sparkles,
-  Layers,
   ChevronRight,
+  Globe,
+  Zap,
+  Lock
 } from 'lucide-react';
 import { UserRole } from '@/src/types';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
@@ -23,146 +24,171 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onSelectPortal, onDirectLogin }) => {
   const { loginAsRole } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const portals = [
     {
       role: 'INSTITUTION_ADMIN' as UserRole,
-      title: 'Dean / Institution Admin',
-      description: 'Overview across all campus branches, staff account management, institution circulars & overall financial health.',
+      title: 'Institution Admin',
+      description: 'Global oversight, financial health, and multi-branch management.',
       icon: Building,
-      color: 'bg-purple-600 text-white',
-      badge: 'Institution Scope',
+      gradient: 'from-blue-500/20 to-cyan-500/20',
+      iconColor: 'text-cyan-400',
+      badge: 'Dean Scope',
     },
     {
       role: 'BRANCH_ADMIN' as UserRole,
-      title: 'Principal / Campus Admin',
-      description: 'Branch student import approvals, finalization of attendance, exam result publishing, and branch staff control.',
+      title: 'Campus Principal',
+      description: 'Branch-level approvals, attendance finalization, and staff control.',
       icon: School,
-      color: 'bg-indigo-600 text-white',
+      gradient: 'from-slate-500/20 to-blue-500/20',
+      iconColor: 'text-blue-400',
       badge: 'Branch Scope',
     },
     {
       role: 'OFFICE_STAFF' as UserRole,
-      title: 'Office Staff / Class Teacher',
-      description: 'Excel student data upload, fee collection & instant receipts, daily attendance recording, and subject marks entry.',
+      title: 'Office Staff',
+      description: 'Daily operations, fee collection, student uploads, and marks entry.',
       icon: UserCheck,
-      color: 'bg-teal-600 text-white',
-      badge: 'Daily Operations',
+      gradient: 'from-teal-500/20 to-emerald-500/20',
+      iconColor: 'text-teal-400',
+      badge: 'Operations',
     },
     {
       role: 'PARENT_GUARDIAN' as UserRole,
-      title: 'Parent / Guardian Portal',
-      description: 'Mobile-first portal for parents to track finalized attendance, fee payments, receipts, exam report cards, and WhatsApp alerts.',
+      title: 'Parent Portal',
+      description: 'Real-time attendance, fee receipts, report cards, and live alerts.',
       icon: Users,
-      color: 'bg-emerald-600 text-white',
+      gradient: 'from-orange-500/20 to-amber-500/20',
+      iconColor: 'text-orange-400',
       badge: 'Parent Access',
     },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
-      {/* Top Navbar */}
-      <nav className="bg-slate-900 text-white border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-teal-600 rounded-xl text-white shadow-md">
-            <School className="w-6 h-6" />
+    <div className="min-h-screen bg-[#0A0A0B] text-slate-300 font-sans selection:bg-blue-500/30 overflow-x-hidden">
+      {/* Dynamic Background Elements */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-600/10 rounded-full blur-[120px]" />
+      </div>
+
+      {/* Navbar */}
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 border-b ${scrolled ? 'bg-[#0A0A0B]/80 backdrop-blur-xl border-white/10 py-3' : 'bg-transparent border-transparent py-5'}`}>
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3 group cursor-pointer">
+            <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
+              <School className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="text-lg font-bold tracking-tight text-white block leading-none">
+                Student Operations Hub
+              </span>
+            </div>
           </div>
-          <div>
-            <span className="text-lg font-bold tracking-tight block leading-none">
-              SMS for Intermediate
-            </span>
-            <span className="text-[11px] text-teal-400 font-medium">
-              Sri Vignan Intermediate College Platform
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              loginAsRole('INSTITUTION_ADMIN');
-            }}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-            id="landing-quick-demo-login"
+            onClick={() => loginAsRole('INSTITUTION_ADMIN')}
+            className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-full backdrop-blur-md border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
           >
-            <span>Launch Live Demo</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <span>Live Demo</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </nav>
 
-      {/* Hero Banner */}
-      <section className="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white py-16 px-6 lg:px-12 text-center relative overflow-hidden">
-        <div className="max-w-4xl mx-auto space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-full text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-            <span>Tailored for Intermediate Colleges in Andhra Pradesh & Telangana</span>
+      <main className="relative z-10">
+        {/* Hero Section */}
+        <section className="pt-40 pb-24 px-6 text-center max-w-5xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-xs font-medium text-blue-300 mb-8 animate-fade-in-up">
+            <Sparkles className="w-4 h-4 text-blue-400" />
+            <span>Next-Generation Education Management</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            Replace Paper Registers & Disconnected Excel Files in One Simple System
+
+          <h1 className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-slate-400 tracking-tight leading-[1.1] mb-8">
+            Manage your entire institution with absolute precision.
           </h1>
-          <p className="text-slate-300 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-            Manage student admissions, fee ledgers, daily attendance, examination marks, and WhatsApp parent communications with role-based access control.
+
+          <p className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed mb-12">
+            The definitive operating system for intermediate colleges. Unify admissions, fee ledgers, daily attendance, and parent communications into one impossibly fast, beautifully designed platform.
           </p>
 
-          <div className="pt-4 flex flex-wrap justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-20">
             <button
               onClick={() => loginAsRole('INSTITUTION_ADMIN')}
-              className="px-6 py-3 bg-teal-500 hover:bg-teal-600 text-slate-950 font-bold rounded-2xl shadow-lg transition-all hover:scale-105 text-sm flex items-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-400 hover:to-cyan-500 text-white font-bold rounded-full shadow-[0_0_40px_-10px_rgba(59,130,246,0.5)] transition-all hover:scale-105 flex items-center justify-center gap-2"
             >
               <span>Explore as Dean</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-5 h-5" />
             </button>
             <button
               onClick={() => loginAsRole('PARENT_GUARDIAN')}
-              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl border border-slate-700 transition-all text-sm flex items-center gap-2"
+              className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-full border border-white/10 transition-all flex items-center justify-center gap-2"
             >
-              <span>View Parent Portal (Ravi Kumar)</span>
-              <Users className="w-4 h-4 text-emerald-400" />
+              <Users className="w-5 h-5 text-blue-400" />
+              <span>Preview Parent Portal</span>
             </button>
           </div>
-        </div>
-      </section>
 
-      {/* Three Pillars */}
-      <section className="py-12 px-6 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <div className="p-3 bg-indigo-50 text-indigo-700 rounded-xl w-fit">
-            <FileSpreadsheet className="w-6 h-6" />
+          {/* Dashboard Image Component - Borderless */}
+          <div className="relative mx-auto max-w-5xl transition-transform duration-700 hover:scale-[1.02]">
+            {/* Raw Image */}
+            <img
+              src="/dashboard_mockup.png"
+              alt="SMS Dashboard Preview"
+              className="w-full h-auto rounded-lg object-cover shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+            />
           </div>
-          <h3 className="font-bold text-slate-900 text-base">Excel-First Student Upload</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Upload your existing admission spreadsheets. Intelligent header validation detects invalid rows, branch mismatches, and duplicate admission numbers before final confirmation.
-          </p>
-        </div>
+        </section>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl w-fit">
-            <MessageSquare className="w-6 h-6" />
+        {/* Feature Grid */}
+        <section className="py-24 px-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Zap,
+                title: 'Lightning Fast Imports',
+                desc: 'Upload thousands of student records via Excel in seconds. Smart validation catches duplicates and errors instantly.',
+                color: 'text-amber-400',
+                bg: 'bg-amber-500/10',
+              },
+              {
+                icon: Globe,
+                title: 'Live Parent Sync',
+                desc: 'Instantly notify parents via simulated WhatsApp alerts for attendance, fee dues, and exam results without manual effort.',
+                color: 'text-emerald-400',
+                bg: 'bg-emerald-500/10',
+              },
+              {
+                icon: Lock,
+                title: 'Bank-Grade RBAC',
+                desc: 'Strict role-based access ensures Deans, Principals, Staff, and Parents only see exactly what they are authorized to.',
+                color: 'text-rose-400',
+                bg: 'bg-rose-500/10',
+              }
+            ].map((feature, i) => (
+              <div key={i} className="group p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-500 hover:-translate-y-2">
+                <div className={`p-4 rounded-2xl w-fit ${feature.bg} mb-6 group-hover:scale-110 transition-transform`}>
+                  <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                <p className="text-slate-400 leading-relaxed text-sm">{feature.desc}</p>
+              </div>
+            ))}
           </div>
-          <h3 className="font-bold text-slate-900 text-base">WhatsApp Mobile Previews</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Keep parents informed automatically. Preview realistic WhatsApp mobile messages for student absences, fee reminders, payment receipts, exam results, and circulars.
-          </p>
-        </div>
+        </section>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-          <div className="p-3 bg-purple-50 text-purple-700 rounded-xl w-fit">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-slate-900 text-base">Strict Role-Based Access</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Separate capabilities for Deans, Principals, Office Staff, and Parents. Parents see only approved, finalized child data with zero access to staff draft records.
-          </p>
-        </div>
-      </section>
-
-      {/* Select Portal Section */}
-      <section className="py-12 px-6 bg-slate-100 border-t border-b border-slate-200">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold text-slate-900">Select a Portal to Experience</h2>
-            <p className="text-xs text-slate-500">
-              Click any portal card to log in with predefined demo credentials:
+        {/* Interactive Portal Selection */}
+        <section className="py-24 px-6 max-w-7xl mx-auto border-t border-white/10">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white">Experience Every Perspective</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              Select a portal below to instantly log in as a specific role and explore the customized dashboard and workflows available to them.
             </p>
           </div>
 
@@ -172,54 +198,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectPortal, onDire
               return (
                 <div
                   key={p.role}
-                  className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                  id={`portal-card-${p.role.toLowerCase()}`}
+                  className="relative group bg-[#111114] rounded-3xl p-1 overflow-hidden transition-all duration-500 hover:scale-[1.02]"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className={`p-3 rounded-xl ${p.color}`}>
+                  {/* Animated Border Gradient */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${p.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl`} />
+
+                  <div className="relative h-full bg-[#111114] rounded-[22px] border border-white/10 p-6 flex flex-col z-10">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className={`p-3 rounded-xl bg-white/5 border border-white/10 ${p.iconColor}`}>
                         <Icon className="w-6 h-6" />
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2 py-1 rounded border border-slate-200">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
                         {p.badge}
                       </span>
                     </div>
-                    <h3 className="font-bold text-slate-900 text-base">{p.title}</h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">{p.description}</p>
-                  </div>
 
-                  <div className="pt-6 space-y-2">
-                    <button
-                      onClick={() => onSelectPortal(p.role)}
-                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <span>Open Portal Login</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => onDirectLogin(p.role)}
-                      className="w-full py-2 text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 rounded-xl text-[11px] font-semibold transition-colors text-center"
-                    >
-                      Instant 1-Click Entry
-                    </button>
+                    <h3 className="text-lg font-bold text-white mb-2">{p.title}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed mb-8 flex-grow">
+                      {p.description}
+                    </p>
+
+                    <div className="space-y-3 mt-auto">
+                      <button
+                        onClick={() => onSelectPortal(p.role)}
+                        className="w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-2 border border-white/5"
+                      >
+                        <span>Open Login Page</span>
+                        <ChevronRight className="w-4 h-4 opacity-50" />
+                      </button>
+                      <button
+                        onClick={() => onDirectLogin(p.role)}
+                        className="w-full py-3 bg-white text-black hover:bg-slate-200 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-lg"
+                      >
+                        Instant Access
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Demo Disclaimer Footer */}
-      <footer className="bg-slate-900 text-slate-400 text-xs py-8 px-6 mt-auto border-t border-slate-800 text-center">
-        <div className="max-w-4xl mx-auto space-y-3">
-          <p className="font-semibold text-slate-200">
-            SMS for Intermediate — Sri Vignan Intermediate College Sales Demonstration MVP
-          </p>
-          <p className="text-[11px] leading-relaxed text-slate-400">
-            This demonstration application uses fictional student records and simulated WhatsApp message previews. No real WhatsApp messages or payment gateway charges are executed.
-          </p>
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-white/10 bg-[#0A0A0B] py-12 text-center px-6">
+        <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
+          <School className="w-5 h-5 text-white" />
+          <span className="text-sm font-bold text-white tracking-wider uppercase">Ottobon SMS</span>
         </div>
+        <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
+          This is a demonstration application. All data, including student records and simulated WhatsApp messages, is entirely fictional.
+        </p>
       </footer>
     </div>
   );
