@@ -1,8 +1,16 @@
 import { UserRole } from '@/src/types';
 
-export const MODULE_ROLES: UserRole[] = ['INSTITUTION_ADMIN', 'BRANCH_ADMIN'];
-
 export const ModulePermissions = {
-  canView: (role: UserRole) => MODULE_ROLES.includes(role),
-  canEdit: (role: UserRole) => ['INSTITUTION_ADMIN', 'BRANCH_ADMIN'].includes(role),
+  // Office Staff Actions
+  canCreateImport: (role: UserRole) => role === 'OFFICE_STAFF',
+  canUpload: (role: UserRole) => role === 'OFFICE_STAFF',
+  canSubmit: (role: UserRole) => role === 'OFFICE_STAFF',
+
+  // Principal Actions
+  canReviewImport: (role: UserRole) => role === 'BRANCH_ADMIN',
+  canReturnImport: (role: UserRole) => role === 'BRANCH_ADMIN',
+  canApproveImport: (role: UserRole) => role === 'BRANCH_ADMIN',
+
+  // Dean / Oversight Actions
+  canViewImportOversight: (role: UserRole) => role === 'INSTITUTION_ADMIN' || role === 'BRANCH_ADMIN' || role === 'OFFICE_STAFF',
 };
