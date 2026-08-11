@@ -1,290 +1,534 @@
 import React, { useState } from 'react';
-import { dbRepository } from '@/src/services/db';
-import { AttendanceEntry, AttendanceSession, Student } from '@/src/types';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
-import { CalendarCheck, CheckCircle2, AlertCircle, Clock, ShieldCheck, Check, MessageSquare, Filter } from 'lucide-react';
+import { AttendanceOverviewPage } from './AttendanceOverviewPage';
+import { AttendanceGrid } from '../components/AttendanceGrid';
+import { AttendanceService } from '../services/AttendanceService';
+import { AttendanceContext, AttendanceWorkflowState, StudentAttendanceRecord } from '../types';
+import { ModulePermissions } from '../permissions';
+import { Save, Check, FileWarning, ArrowLeft, RefreshCw, ArrowRight, Clock, AlertCircle, CalendarCheck, CheckCircle2, ShieldCheck, MessageSquare, Filter } from 'lucide-react';
 import { WhatsAppModal } from '@/src/modules/notifications/components/WhatsAppModal';
+import { dbRepository } from '@/src/services/db';
 
 export const AttendanceModulePage: React.FC = () => {
-  const { currentUser, triggerRefresh } = useAuth();
-  const [students] = useState(() => dbRepository.getStudents());
-  const [sessions, setSessions] = useState(() => dbRepository.getAttendanceSessions());
-  const [records, setRecords] = useState(() => dbRepository.getAttendanceRecords());
+  const { currentUser } = useAuth();
+  const [view, setView] = useState<'OVERVIEW' | 'SESSION' | 'REVIEW'>('OVERVIEW');
+  const [sessionState, setSessionState] = useState<AttendanceWorkflowState>('DRAFT');
+  
+  const [context, setContext] = useState<AttendanceContext>({
+      branch: 'Visakhapatnam Campus',
+      academicYear: '2026-27',
+      yearLevel: 'First Year',
+      programme: 'MPC + JEE',
+      batch: 'JEE Advanced A',
+      section: 'A',
+      date: new Date().toISOString().split('T')[0]
+  });
 
-  const [selectedSection, setSelectedSection] = useState('MPC-A');
-  const [selectedDate, setSelectedDate] = useState('2026-08-06');
-  const [attendanceMap, setAttendanceMap] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'>>({});
+  const [students, setStudents] = useState<StudentAttendanceRecord[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnedMessage, setReturnedMessage] = useState('');
+  
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
 
-  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
-  const isPrincipalOrDean = isDean || currentUser?.role === 'BRANCH_ADMIN';
-  const branches = dbRepository.getBranches();
-  const [branchFilter, setBranchFilter] = useState<string>('ALL');
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false);
 
-  const sectionStudents = students;
+  const role = currentUser?.role || 'OFFICE_STAFF';
+  const canMark = ModulePermissions.canMarkAttendance(role);
+  const canSave = ModulePermissions.canSaveDraft(role);
+  const canSubmit = ModulePermissions.canSubmitAttendance(role);
+  const canReview = ModulePermissions.canReviewAttendance(role);
+  const canReturn = ModulePermissions.canReturnAttendance(role);
+  const canFinalize = ModulePermissions.canFinalizeAttendance(role);
+  const canReopen = ModulePermissions.canReopenAttendance(role);
+  const isDean = role === 'INSTITUTION_ADMIN';
 
-  const currentSession = sessions.find(
-    (s) => s.attendanceDate === selectedDate
-  );
-
-  const refreshData = () => {
-    setSessions(dbRepository.getAttendanceSessions());
-    setRecords(dbRepository.getAttendanceRecords());
-    triggerRefresh();
+  // Computed Summary
+  const summary = {
+      totalStudents: students.length,
+      present: students.filter(s => s.status === 'PRESENT').length,
+      absent: students.filter(s => s.status === 'ABSENT').length,
+      leave: students.filter(s => s.status === 'LEAVE').length,
+      unmarked: students.filter(s => s.status === null).length,
   };
 
-  const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LEAVE') => {
-    setAttendanceMap((prev) => ({ ...prev, [studentId]: status }));
+  const loadStudents = async () => {
+      setIsProcessing(true);
+      const data = await AttendanceService.getEligibleStudents(context);
+      setStudents(data);
+      setIsProcessing(false);
   };
 
-  const handleMarkAllPresent = () => {
-    const map: Record<string, 'PRESENT' | 'ABSENT' | 'LEAVE'> = {};
-    sectionStudents.forEach((s) => {
-      map[s.id] = 'PRESENT';
-    });
-    setAttendanceMap(map);
+  const handleStartSession = () => {
+      setView('SESSION');
+      setSessionState('DRAFT');
+      loadStudents();
   };
 
-  const handleSubmitAttendance = () => {
-    const expectedBranchId = isDean && branchFilter !== 'ALL' ? branchFilter : (currentUser?.branchId || 'branch-hyd-main');
-
-    const session: AttendanceSession = {
-      id: `att-session-${Date.now()}`,
-      institutionId: 'inst-svic-01',
-      branchId: expectedBranchId,
-      academicYearId: 'year-2026',
-      programmeId: 'prog-mpc',
-      batchId: 'batch-mpc-2026',
-      sectionId: 'sec-mpc-a',
-      attendanceDate: selectedDate,
-      submittedBy: currentUser?.id || 'office-1',
-      status: 'SUBMITTED',
-      version: 1,
-    };
-
-    dbRepository.addAttendanceSession(session);
-
-    // Add individual records
-    const entries: AttendanceEntry[] = sectionStudents.map((st) => ({
-      id: `att-rec-${Date.now()}-${st.id}`,
-      attendanceSessionId: session.id,
-      enrollmentId: `enr-${st.id}`,
-      studentId: st.id,
-      status: attendanceMap[st.id] || 'PRESENT',
-    }));
-
-    dbRepository.setAttendanceEntries(session.id, entries);
-
-    refreshData();
-    alert(`Attendance for ${selectedSection} on ${selectedDate} submitted to Principal for finalization.`);
+  const handleStatusChange = (id: string, status: any) => {
+      if (!canMark && sessionState !== 'REOPENED') return;
+      setStudents(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+  };
+  
+  const handleNoteChange = (id: string, note: string) => {
+      if (!canMark && sessionState !== 'REOPENED') return;
+      setStudents(prev => prev.map(s => s.id === id ? { ...s, note } : s));
   };
 
-  const handleFinalizeAttendance = () => {
-    if (!currentSession) return;
+  const handleMarkAll = () => setStudents(prev => prev.map(s => ({ ...s, status: 'PRESENT' })));
+  const handleClearAll = () => setStudents(prev => prev.map(s => ({ ...s, status: null })));
 
-    dbRepository.updateAttendanceSession(currentSession.id, {
-      status: 'FINALIZED',
-      finalizedBy: currentUser?.id || 'principal-1',
-      finalizedAt: new Date().toISOString(),
-    });
+  const handleSaveDraft = async () => {
+      if (!canSave) return;
+      setIsProcessing(true);
+      await AttendanceService.saveDraft(context, students);
+      setLastSaved(new Date().toLocaleTimeString());
+      setIsProcessing(false);
+  };
 
-    // Check absent students and enqueue WhatsApp notification
-    const absents = records.filter(
-      (r) => r.attendanceSessionId === currentSession.id && r.status === 'ABSENT'
-    );
-
-    absents.forEach((abs) => {
-      const student = students.find((s) => s.id === abs.studentId);
-      if (student) {
-        const waText = `Dear Parent,\n\n${student.firstName} ${student.lastName} was marked absent on ${selectedDate} at Sri Vignan Intermediate College, Main Campus.\n\nPlease contact the college office if clarification is required.`;
-
-        dbRepository.addNotificationEvent({
-          id: `notif-${Date.now()}-${student.id}`,
-          institutionId: 'inst-svic-01',
-          branchId: 'branch-hyd-main',
-          studentId: student.id,
-          guardianId: 'guard-1',
-          sourceModule: 'Attendance',
-          sourceRecordId: abs.id,
-          recipientMobile: '9000020001',
-          eventType: 'ATTENDANCE_ABSENCE',
-          resolvedMessage: waText,
-          status: 'DELIVERED',
-          createdAt: new Date().toISOString(),
-          retryCount: 0,
-        });
+  const handleSubmit = async () => {
+      if (!canSubmit) return;
+      if (summary.unmarked > 0) {
+          alert(`${summary.unmarked} students are still unmarked. Resolve all students before submitting.`);
+          return;
       }
-    });
-
-    refreshData();
-    alert(
-      `Attendance for ${selectedSection} finalized! WhatsApp absence notifications queued for ${absents.length} absent student(s).`
-    );
+      setIsProcessing(true);
+      await AttendanceService.submitForReview(context, students);
+      setSessionState('SUBMITTED');
+      setIsProcessing(false);
   };
+
+  const handleReturn = async () => {
+      if (!canReturn || !returnReason.trim()) return;
+      setIsProcessing(true);
+      await AttendanceService.returnForCorrection('temp-id', returnReason);
+      setReturnedMessage(returnReason);
+      setSessionState('RETURNED');
+      setShowReturnModal(false);
+      setReturnReason('');
+      setIsProcessing(false);
+  };
+
+  const handleFinalize = async () => {
+      if (!canFinalize) return;
+      setIsProcessing(true);
+      await AttendanceService.finalize('temp-id');
+      setSessionState('FINALIZED');
+      setShowFinalizeModal(false);
+      setIsProcessing(false);
+  };
+
+  const handleReopen = async () => {
+      if (!canReopen || !reopenReason.trim()) return;
+      setIsProcessing(true);
+      await AttendanceService.reopen('temp-id', reopenReason);
+      setStudents(prev => prev.map(s => ({...s, previousStatus: s.status, correctionReason: reopenReason})));
+      setSessionState('REOPENED');
+      setShowReopenModal(false);
+      setReopenReason('');
+      setIsProcessing(false);
+  };
+
+  if (view === 'OVERVIEW') {
+      return <AttendanceOverviewPage onStartSession={handleStartSession} />;
+  }
+
+  // Determine if grid is read-only based on role and workflow state
+  const isGridReadOnly = 
+      sessionState === 'SUBMITTED' || 
+      sessionState === 'FINALIZED' || 
+      (sessionState === 'DRAFT' && !canMark) || 
+      (sessionState === 'RETURNED' && !canMark) ||
+      (sessionState === 'REOPENED' && !canReview);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+    <div className="space-y-8 max-w-7xl mx-auto pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      <div className="glass-panel rounded-[2rem] p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Daily Attendance Management</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Record class section attendance, submit for review, finalize records, and send instant parent WhatsApp absence alerts.
-          </p>
+            <button onClick={() => setView('OVERVIEW')} className="text-slate-500 font-medium text-sm hover:text-indigo-600 transition-colors flex items-center gap-1 group mb-4">
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back to Overview
+            </button>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                {sessionState === 'SUBMITTED' ? 'Attendance Review' : 'Daily Attendance Session'}
+            </h1>
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/80 border border-slate-200">
+                <div className={`w-2 h-2 rounded-full ${
+                    sessionState === 'DRAFT' ? 'bg-slate-400' :
+                    sessionState === 'SUBMITTED' ? 'bg-amber-500' :
+                    sessionState === 'RETURNED' ? 'bg-rose-500' :
+                    sessionState === 'FINALIZED' ? 'bg-emerald-500' :
+                    'bg-indigo-500'
+                }`} />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                    {sessionState}
+                </span>
+            </div>
         </div>
+      </div>
 
-        {isDean && (
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="ALL">All Branches</option>
-              {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
+      <div className="glass-panel rounded-[24px] p-8 space-y-6">
+        <h3 className="font-bold text-slate-900 tracking-tight text-lg border-b border-slate-100 pb-4">Session Context</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Branch</label>
+                {isDean ? (
+                    <select
+                        value={context.branch}
+                        onChange={async (e) => {
+                            const newContext = { ...context, branch: e.target.value };
+                            setContext(newContext);
+                            setIsProcessing(true);
+                            const data = await AttendanceService.getEligibleStudents(newContext);
+                            setStudents(data);
+                            setIsProcessing(false);
+                        }}
+                        className="w-full bg-transparent text-sm font-bold text-slate-800 cursor-pointer focus:outline-none"
+                    >
+                        {dbRepository.getBranches().map(b => (
+                            <option key={b.id} value={b.name}>{b.name}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <div className="text-sm font-bold text-slate-800 leading-tight">{context.branch}</div>
+                )}
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Academic Year</label>
+                <div className="text-sm font-bold text-slate-800 leading-tight">{context.academicYear}</div>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Year Level</label>
+                <select
+                    value={context.yearLevel}
+                    onChange={async (e) => {
+                        const newContext = { ...context, yearLevel: e.target.value };
+                        setContext(newContext);
+                        setIsProcessing(true);
+                        const data = await AttendanceService.getEligibleStudents(newContext);
+                        setStudents(data);
+                        setIsProcessing(false);
+                    }}
+                    className="w-full bg-transparent text-sm font-bold text-slate-800 cursor-pointer focus:outline-none"
+                >
+                    <option value="First Year">First Year</option>
+                    <option value="Second Year">Second Year</option>
+                </select>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Programme</label>
+                <div className="text-sm font-bold text-slate-800 leading-tight">{context.programme}</div>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Batch</label>
+                <div className="text-sm font-bold text-slate-800 leading-tight">{context.batch}</div>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Section</label>
+                <div className="text-sm font-black text-indigo-600 text-center leading-tight">{context.section}</div>
+            </div>
+            <div className="col-span-2 lg:col-span-1">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">Date</label>
+                <input 
+                    type="date" 
+                    value={context.date}
+                    onChange={(e) => setContext({...context, date: e.target.value})}
+                    disabled={sessionState !== 'DRAFT' && sessionState !== 'RETURNED'}
+                    className="w-full px-4 py-3 bg-white/80 border border-slate-200/60 rounded-xl text-sm font-bold disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                />
+            </div>
+        </div>
+      </div>
+
+      {workflowStateMessage()}
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 sticky top-4 z-40 bg-white/70 backdrop-blur-2xl p-4 rounded-[2rem] border border-white/60 shadow-lg shadow-slate-200/50">
+        <div className="text-center p-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Total</p>
+          <p className="text-2xl font-black text-slate-900">{summary.totalStudents}</p>
+        </div>
+        <div className="text-center p-3 rounded-2xl bg-emerald-50/80 border border-emerald-100/50">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1">Present</p>
+          <p className="text-2xl font-black text-emerald-700">{summary.present}</p>
+        </div>
+        <div className="text-center p-3 rounded-2xl bg-rose-50/80 border border-rose-100/50">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600 mb-1">Absent</p>
+          <p className="text-2xl font-black text-rose-700">{summary.absent}</p>
+        </div>
+        <div className="text-center p-3 rounded-2xl bg-amber-50/80 border border-amber-100/50">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Leave</p>
+          <p className="text-2xl font-black text-amber-700">{summary.leave}</p>
+        </div>
+        <div className={`text-center p-3 rounded-2xl border transition-colors ${summary.unmarked > 0 ? 'bg-slate-900 text-white border-slate-900 premium-shadow scale-105' : 'bg-transparent border-transparent'}`}>
+          <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Unmarked</p>
+          <p className="text-2xl font-black">{summary.unmarked}</p>
+        </div>
+      </div>
+
+      <div className="glass-panel rounded-[2rem] p-6 sm:p-8 space-y-6">
+        
+        {!isGridReadOnly && (
+            <div className="flex gap-3">
+                <button 
+                    onClick={handleMarkAll}
+                    className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold premium-shadow hover:scale-105 active:scale-95 transition-all"
+                >
+                    Mark All Present
+                </button>
+                <button 
+                    onClick={handleClearAll}
+                    className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                >
+                    Clear All
+                </button>
+            </div>
         )}
 
-        {currentSession?.status === 'SUBMITTED' && isPrincipalOrDean && (
-          <button
-            onClick={handleFinalizeAttendance}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 transition-all"
-            id="finalize-attendance-button"
-          >
-            <ShieldCheck className="w-4 h-4 text-indigo-200" /> Finalize Attendance & Alert Parents
-          </button>
-        )}
+        <AttendanceGrid 
+            students={students} 
+            onStatusChange={handleStatusChange} 
+            onNoteChange={handleNoteChange}
+            readOnly={isGridReadOnly}
+        />
+
+        {/* Action Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-center pt-8 mt-6 border-t border-slate-100 gap-4">
+            <div>
+                {lastSaved && <p className="text-xs text-slate-400 font-medium bg-slate-50 px-3 py-1.5 rounded-full inline-flex items-center gap-2"><Clock className="w-3 h-3" /> Last saved at {lastSaved}</p>}
+            </div>
+            
+            <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                {(sessionState === 'DRAFT' || sessionState === 'RETURNED') && canSave && (
+                    <button 
+                        onClick={handleSaveDraft}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-6 py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl text-sm font-bold shadow-sm transition-all flex justify-center items-center gap-2 active:scale-95"
+                    >
+                        <Save className="w-4 h-4" /> Save Draft
+                    </button>
+                )}
+                
+                {(sessionState === 'DRAFT' || sessionState === 'RETURNED') && canSubmit && (
+                    <button 
+                        onClick={handleSubmit}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-bold premium-shadow transition-all flex justify-center items-center gap-2 active:scale-95 group"
+                    >
+                        Submit for Review
+                        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                            <ArrowRight className="w-3 h-3 text-white" />
+                        </div>
+                    </button>
+                )}
+
+                {sessionState === 'SUBMITTED' && canReturn && (
+                    <button 
+                        onClick={() => setShowReturnModal(true)}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-6 py-3.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-2xl text-sm font-bold border border-rose-200/50 transition-all flex justify-center items-center gap-2 active:scale-95"
+                    >
+                        <FileWarning className="w-4 h-4" /> Return for Correction
+                    </button>
+                )}
+                
+                {sessionState === 'SUBMITTED' && canFinalize && (
+                    <button 
+                        onClick={() => setShowFinalizeModal(true)}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-8 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-bold premium-glow-emerald transition-all flex justify-center items-center gap-2 active:scale-95 group"
+                    >
+                        <Check className="w-5 h-5" /> Finalize Attendance
+                    </button>
+                )}
+
+                {sessionState === 'FINALIZED' && canReopen && (
+                     <button 
+                        onClick={() => setShowReopenModal(true)}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-6 py-3.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/50 rounded-2xl text-sm font-bold transition-all flex justify-center items-center gap-2 active:scale-95"
+                    >
+                        <RefreshCw className="w-4 h-4" /> Reopen Attendance
+                    </button>
+                )}
+                
+                {sessionState === 'REOPENED' && canFinalize && (
+                     <button 
+                        onClick={() => setShowFinalizeModal(true)}
+                        disabled={isProcessing}
+                        className="flex-1 sm:flex-none px-8 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-bold premium-glow-emerald transition-all flex justify-center items-center gap-2 active:scale-95 group"
+                    >
+                        <Check className="w-5 h-5" /> Re-finalize Attendance
+                    </button>
+                )}
+            </div>
+        </div>
+
       </div>
 
-      {/* Control Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row justify-between gap-4">
-        <div className="flex gap-3">
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Select Section</label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
-            >
-              <option value="MPC-A">MPC-A (First Year)</option>
-              <option value="MPC-B">MPC-B (First Year)</option>
-              <option value="BiPC-A">BiPC-A (First Year)</option>
-              <option value="CEC-A">CEC-A (First Year)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Attendance Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold"
-            />
-          </div>
+      {/* Return Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="w-full max-w-md glass-modal rounded-[2rem] overflow-hidden p-8 space-y-6 animate-in zoom-in-95 duration-300">
+                <div>
+                    <h3 className="text-2xl font-bold tracking-tight text-slate-900">Return Session</h3>
+                    <p className="text-sm font-medium text-slate-500 mt-1">Specify what needs to be corrected by the office staff.</p>
+                </div>
+                <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Reason for Return</label>
+                    <textarea 
+                        value={returnReason}
+                        onChange={(e) => setReturnReason(e.target.value)}
+                        className="w-full bg-white/60 border border-slate-200/60 rounded-[1.5rem] p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                        rows={4}
+                        placeholder="Explain what needs to be corrected..."
+                    />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                    <button onClick={() => setShowReturnModal(false)} className="px-5 py-2.5 font-bold text-slate-500 hover:text-slate-800 text-sm transition-colors">Cancel</button>
+                    <button onClick={handleReturn} className="px-6 py-2.5 bg-rose-500 text-white rounded-2xl font-bold text-sm premium-glow-rose hover:-translate-y-0.5 active:translate-y-0 transition-all">Return to Staff</button>
+                </div>
+            </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">Session Status:</span>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold ${
-              currentSession?.status === 'FINALIZED'
-                ? 'bg-emerald-100 text-emerald-800'
-                : currentSession?.status === 'SUBMITTED'
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {currentSession?.status || 'DRAFT (NOT SUBMITTED)'}
-          </span>
+      )}
+      
+      {/* Reopen Modal */}
+      {showReopenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="w-full max-w-md glass-modal rounded-[2rem] overflow-hidden p-8 space-y-6 animate-in zoom-in-95 duration-300">
+                <div>
+                    <h3 className="text-2xl font-bold tracking-tight text-slate-900">Reopen Attendance</h3>
+                    <p className="text-sm font-medium text-slate-500 mt-1">This allows you to modify records that were already finalized.</p>
+                </div>
+                <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Reason for Reopening</label>
+                    <textarea 
+                        value={reopenReason}
+                        onChange={(e) => setReopenReason(e.target.value)}
+                        className="w-full bg-white/60 border border-slate-200/60 rounded-[1.5rem] p-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
+                        rows={4}
+                        placeholder="Explain why you are modifying a finalized record..."
+                    />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                    <button onClick={() => setShowReopenModal(false)} className="px-5 py-2.5 font-bold text-slate-500 hover:text-slate-800 text-sm transition-colors">Cancel</button>
+                    <button onClick={handleReopen} className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl font-bold text-sm premium-glow-indigo hover:-translate-y-0.5 active:translate-y-0 transition-all">Reopen Session</button>
+                </div>
+            </div>
         </div>
-      </div>
+      )}
 
-      {/* Grid */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-xs p-6 space-y-4">
-        <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-          <h3 className="font-bold text-slate-900 text-sm">
-            Attendance Grid for {selectedSection} ({selectedDate})
-          </h3>
-          <button
-            onClick={handleMarkAllPresent}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
-          >
-            Mark All Present
-          </button>
-        </div>
+      {/* Finalize Modal */}
+      {showFinalizeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="w-full max-w-lg glass-modal rounded-[2rem] overflow-hidden p-8 space-y-6 animate-in zoom-in-95 duration-300">
+                <div>
+                    <h3 className="text-2xl font-bold tracking-tight text-slate-900">Finalize Attendance?</h3>
+                    <p className="text-sm font-medium text-slate-500 mt-1">After finalization, this attendance becomes official and can be displayed to parents.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Total</p>
+                        <p className="text-xl font-black text-slate-900">{summary.totalStudents}</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1">Present</p>
+                        <p className="text-xl font-black text-emerald-700">{summary.present}</p>
+                    </div>
+                    <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-rose-600 mb-1">Absent</p>
+                        <p className="text-xl font-black text-rose-700">{summary.absent}</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Leave</p>
+                        <p className="text-xl font-black text-amber-700">{summary.leave}</p>
+                    </div>
+                </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-200">
-              <tr>
-                <th className="p-3">Admission No</th>
-                <th className="p-3">Student Name</th>
-                <th className="p-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {sectionStudents.map((s) => {
-                const currentStatus = attendanceMap[s.id] || 'PRESENT';
-                return (
-                  <tr key={s.id} className="hover:bg-slate-50">
-                    <td className="p-3 font-mono font-bold text-slate-900">{s.admissionNumber}</td>
-                    <td className="p-3 font-semibold text-slate-800">
-                      {s.firstName} {s.lastName}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex justify-center gap-1">
-                        <button
-                          onClick={() => handleStatusChange(s.id, 'PRESENT')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                            currentStatus === 'PRESENT'
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          PRESENT
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(s.id, 'ABSENT')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                            currentStatus === 'ABSENT'
-                              ? 'bg-rose-600 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          ABSENT
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(s.id, 'LEAVE')}
-                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                            currentStatus === 'LEAVE'
-                              ? 'bg-amber-500 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          LEAVE
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                <div className="flex justify-end gap-3 pt-2">
+                    <button onClick={() => setShowFinalizeModal(false)} className="px-5 py-2.5 font-bold text-slate-500 hover:text-slate-800 text-sm transition-colors">Cancel</button>
+                    <button onClick={handleFinalize} className="px-6 py-2.5 bg-emerald-500 text-white rounded-2xl font-bold text-sm premium-glow-emerald hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2">
+                        <Check className="w-4 h-4" /> Finalize Attendance
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <div className="pt-4 flex justify-end">
-          <button
-            onClick={handleSubmitAttendance}
-            className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md"
-          >
-            Submit Class Attendance for Review
-          </button>
-        </div>
-      </div>
+      )}
+      
     </div>
   );
+
+  function workflowStateMessage() {
+      if (sessionState === 'RETURNED' && returnedMessage && canSubmit) {
+          return (
+              <div className="glass-panel border-rose-200/60 bg-rose-50/50 rounded-[24px] p-6 sm:p-8 animate-in fade-in duration-300">
+                  <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                          <AlertCircle className="w-6 h-6 text-rose-600" />
+                      </div>
+                      <div>
+                          <h3 className="font-bold text-rose-900 text-lg mb-2">Attendance Returned for Correction</h3>
+                          <p className="text-rose-800 text-sm leading-relaxed font-medium bg-white/60 p-4 rounded-xl border border-rose-100">
+                              <strong className="block mb-1 text-xs uppercase tracking-widest text-rose-500">Principal's Note:</strong>
+                              {returnedMessage}
+                          </p>
+                          <p className="text-sm text-rose-600 mt-4 font-bold">Please correct the entries and submit again.</p>
+                      </div>
+                  </div>
+              </div>
+          );
+      }
+      
+      if (sessionState === 'RETURNED' && canReview) {
+          return (
+              <div className="glass-panel border-rose-200/60 bg-rose-50/50 rounded-[24px] p-6 sm:p-8 animate-in fade-in duration-300">
+                  <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                          <Clock className="w-6 h-6 text-rose-600" />
+                      </div>
+                      <div>
+                          <h3 className="font-bold text-rose-900 text-lg mb-2">Returned for Correction</h3>
+                          <p className="text-sm text-rose-600 font-bold">This session was returned to Office Staff. Waiting for them to resubmit.</p>
+                      </div>
+                  </div>
+              </div>
+          );
+      }
+
+      if (sessionState === 'SUBMITTED' && !canReview && !isDean) {
+          return (
+              <div className="glass-panel border-amber-200/60 bg-amber-50/30 rounded-[24px] p-12 text-center">
+                  <Clock className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight mb-2">Awaiting Principal Review</h3>
+                  <p className="text-sm text-slate-500 font-medium">This session has been submitted and is currently locked.</p>
+              </div>
+          );
+      }
+
+      if (sessionState === 'SUBMITTED' && isDean) {
+          return (
+              <div className="glass-panel border-indigo-200/60 bg-indigo-50/30 rounded-[24px] p-12 text-center">
+                  <Clock className="w-12 h-12 text-indigo-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight mb-2">Currently Under Review by Principal</h3>
+                  <p className="text-sm text-slate-500 font-medium">This session is awaiting branch-level finalization.</p>
+              </div>
+          );
+      }
+      
+      if (sessionState === 'DRAFT' && !canMark) {
+          return (
+              <div className="glass-panel border-slate-200/60 bg-slate-50/50 rounded-[24px] p-12 text-center">
+                  <Clock className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight mb-2">Draft Session</h3>
+                  <p className="text-sm text-slate-500 font-medium">Office Staff is currently preparing this attendance session.</p>
+              </div>
+          );
+      }
+
+      return null;
+  }
 };
