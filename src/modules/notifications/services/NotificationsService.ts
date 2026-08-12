@@ -6,7 +6,7 @@ export class NotificationsService {
     return dbRepository.getNotificationEvents();
   }
   
-  static updateNotificationStatus(eventId: string, status: 'PENDING' | 'DELIVERED' | 'FAILED') {
+  static updateNotificationStatus(eventId: string, status: 'QUEUED' | 'SENT' | 'DELIVERED' | 'FAILED') {
     dbRepository.updateNotificationStatus(eventId, status);
   }
   
