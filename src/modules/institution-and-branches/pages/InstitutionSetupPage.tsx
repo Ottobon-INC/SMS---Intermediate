@@ -47,6 +47,34 @@ export const InstitutionSetupPage: React.FC = () => {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  const roleLabels: Record<User['role'], string> = {
+    INSTITUTION_ADMIN: 'Institution Admin / Dean',
+    BRANCH_ADMIN: 'Principal / Campus Admin',
+    OFFICE_STAFF: 'Office Staff',
+    PARENT_GUARDIAN: 'Parent / Guardian',
+  };
+
+  const principalCandidates = users.filter(
+    (u) => u.status === 'ACTIVE' && (u.role === 'BRANCH_ADMIN' || u.role === 'OFFICE_STAFF')
+  );
+
+  const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+  const selectedUser = users.find((u) => u.id === selectedUserId);
+
+  const getBranchName = (branchId?: string) => {
+    if (!branchId) return 'Unassigned';
+    return branches.find((b) => b.id === branchId)?.name || branchId;
+  };
+
+  const getAssignmentLabel = (user: User) => {
+    if (!user.branchId) return 'Unassigned';
+    if (user.branchId === selectedBranchId) return `Assigned to this campus: ${getBranchName(user.branchId)}`;
+    return `Assigned elsewhere: ${getBranchName(user.branchId)}`;
+  };
+
+  const isAssignedElsewhere = (user: User) => Boolean(user.branchId && user.branchId !== selectedBranchId);
+  const selectedUserAssignedElsewhere = selectedUser ? isAssignedElsewhere(selectedUser) : false;
+
   const handleCreateBranch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!branchName.trim() || !branchCode.trim()) return;
@@ -134,10 +162,15 @@ export const InstitutionSetupPage: React.FC = () => {
     if (!selectedBranchId || !selectedUserId) return;
     const userToUpdate = users.find(u => u.id === selectedUserId);
     if (userToUpdate) {
+      if (isAssignedElsewhere(userToUpdate)) {
+        const confirmReassignment = window.confirm(`${userToUpdate.fullName} is already assigned to ${getBranchName(userToUpdate.branchId)}. Assigning this user to ${selectedBranch?.name || 'this campus'} will move their campus assignment. Do you want to proceed?`);
+        if (!confirmReassignment) return;
+      }
+
       // Find if anyone else is principal of this branch, if so demote them to staff
       const currentPrincipal = users.find(u => u.role === 'BRANCH_ADMIN' && u.branchId === selectedBranchId);
       if (currentPrincipal && currentPrincipal.id !== userToUpdate.id) {
-        const confirmDemotion = window.confirm(`A Principal (${currentPrincipal.firstName} ${currentPrincipal.lastName}) already exists for this branch. Assigning a new one will demote them to OFFICE STAFF. Do you want to proceed?`);
+        const confirmDemotion = window.confirm(`A Principal (${currentPrincipal.fullName}) already exists for ${selectedBranch?.name || 'this branch'}. Assigning ${userToUpdate.fullName} will demote the current principal to OFFICE STAFF. Do you want to proceed?`);
         if (!confirmDemotion) return;
         
         dbRepository.updateUser(currentPrincipal.id, { role: 'OFFICE_STAFF' });
@@ -585,21 +618,64 @@ export const InstitutionSetupPage: React.FC = () => {
             <form onSubmit={handleAssignPrincipal} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Select User *</label>
-                <select
-                  required
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
-                >
-                  <option value="" disabled>-- Select a user --</option>
-                  {users.filter(u => u.role !== 'INSTITUTION_ADMIN' && u.role !== 'STUDENT' && u.role !== 'GUARDIAN').map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.role})
-                    </option>
-                  ))}
-                </select>
+                <div className="max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-2 space-y-2">
+                  {principalCandidates.map((u) => {
+                    const isSelected = selectedUserId === u.id;
+                    const isUnassigned = !u.branchId;
+                    const isElsewhere = isAssignedElsewhere(u);
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => setSelectedUserId(u.id)}
+                        className={`w-full text-left rounded-xl border p-3 transition-colors ${
+                          isSelected
+                            ? 'border-indigo-500 bg-white shadow-sm ring-2 ring-indigo-100'
+                            : 'border-slate-200 bg-white hover:border-indigo-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 leading-5 break-words">{u.fullName}</p>
+                            <p className="text-[11px] font-medium text-slate-500 leading-4">{roleLabels[u.role]}</p>
+                            <p className="mt-1 text-[11px] text-slate-500 leading-4 break-words">{getAssignmentLabel(u)}</p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
+                              isUnassigned
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : isElsewhere
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-indigo-100 text-indigo-700'
+                            }`}
+                          >
+                            {isUnassigned ? 'Unassigned' : isElsewhere ? 'Assigned' : 'This Campus'}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedUser && (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 space-y-1">
+                    <p>
+                      <span className="font-bold text-slate-800">Selected:</span> {selectedUser.fullName}
+                    </p>
+                    <p>
+                      <span className="font-bold text-slate-800">Current role:</span> {roleLabels[selectedUser.role]}
+                    </p>
+                    <p>
+                      <span className="font-bold text-slate-800">Assignment:</span> {getAssignmentLabel(selectedUser)}
+                    </p>
+                  </div>
+                )}
+                {selectedUserAssignedElsewhere && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[11px] font-medium text-amber-800 leading-5">
+                    This user is already assigned to {getBranchName(selectedUser?.branchId)}. Confirming will reassign them to {selectedBranch?.name || 'this campus'}.
+                  </div>
+                )}
                 <p className="text-[10px] text-slate-500 mt-2">
-                  Selecting a user will promote them to BRANCH_ADMIN for this campus and demote the current principal (if any) to STAFF.
+                  Green means unassigned. Orange means the user already belongs to a campus and will need reassignment confirmation.
                 </p>
               </div>
 
