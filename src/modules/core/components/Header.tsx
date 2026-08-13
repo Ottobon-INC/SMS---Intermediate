@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ title, onOpenMobileMenu }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-md">
+    <header className="sticky top-0 z-30 shrink-0 bg-slate-900 text-white border-b border-slate-800 shadow-md">
       <div className="px-4 lg:px-8 py-3 flex items-center justify-between">
         {/* Left branding & page title */}
         <div className="flex items-center gap-3">

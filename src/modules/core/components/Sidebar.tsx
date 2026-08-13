@@ -168,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block self-stretch min-h-full shrink-0">{sidebarContent}</aside>
+      <aside className="hidden lg:block h-full shrink-0">{sidebarContent}</aside>
 
       {/* Mobile Drawer Overlay */}
       {isMobileOpen && (

@@ -195,7 +195,7 @@ export const StudentImportPage: React.FC = () => {
                         <select
                             value={context.branch}
                             onChange={(e) => setContext({...context, branch: e.target.value})}
-                            disabled={!canCreate || (workflowState !== 'SELECT_CONTEXT' && workflowState !== 'RETURNED')}
+                            disabled={role === 'OFFICE_STAFF' || role === 'BRANCH_ADMIN' || (workflowState !== 'SELECT_CONTEXT' && workflowState !== 'RETURNED')}
                             className="w-full px-5 py-4 bg-white/50 border border-slate-200/60 rounded-2xl text-sm font-semibold text-slate-800 disabled:opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 group-hover:bg-white"
                         >
                             <option value="Visakhapatnam Campus">Visakhapatnam Campus</option>
@@ -207,7 +207,7 @@ export const StudentImportPage: React.FC = () => {
                         <select
                             value={context.academicYear}
                             onChange={(e) => setContext({...context, academicYear: e.target.value})}
-                            disabled={!canCreate || (workflowState !== 'SELECT_CONTEXT' && workflowState !== 'RETURNED')}
+                            disabled={workflowState !== 'SELECT_CONTEXT' && workflowState !== 'RETURNED'}
                             className="w-full px-5 py-4 bg-white/50 border border-slate-200/60 rounded-2xl text-sm font-semibold text-slate-800 disabled:opacity-50 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 group-hover:bg-white"
                         >
                             <option value="2026-27">2026-27</option>

@@ -199,7 +199,22 @@ export const AttendanceModulePage: React.FC = () => {
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Academic Year</label>
-                <div className="text-sm font-bold text-slate-800 leading-tight">{context.academicYear}</div>
+                <select
+                    value={context.academicYear}
+                    onChange={async (e) => {
+                        const newContext = { ...context, academicYear: e.target.value };
+                        setContext(newContext);
+                        setIsProcessing(true);
+                        const data = await AttendanceService.getEligibleStudents(newContext);
+                        setStudents(data);
+                        setIsProcessing(false);
+                    }}
+                    disabled={sessionState !== 'DRAFT' && sessionState !== 'RETURNED'}
+                    className="w-full bg-transparent text-sm font-bold text-slate-800 cursor-pointer focus:outline-none disabled:opacity-50"
+                >
+                    <option value="2026-27">2026-27</option>
+                    <option value="2025-26">2025-26</option>
+                </select>
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Year Level</label>
@@ -221,15 +236,64 @@ export const AttendanceModulePage: React.FC = () => {
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Programme</label>
-                <div className="text-sm font-bold text-slate-800 leading-tight">{context.programme}</div>
+                <select
+                    value={context.programme}
+                    onChange={async (e) => {
+                        const newContext = { ...context, programme: e.target.value };
+                        setContext(newContext);
+                        setIsProcessing(true);
+                        const data = await AttendanceService.getEligibleStudents(newContext);
+                        setStudents(data);
+                        setIsProcessing(false);
+                    }}
+                    disabled={sessionState !== 'DRAFT' && sessionState !== 'RETURNED'}
+                    className="w-full bg-transparent text-sm font-bold text-slate-800 cursor-pointer focus:outline-none disabled:opacity-50"
+                >
+                    <option value="MPC + JEE">MPC + JEE</option>
+                    <option value="BiPC + NEET">BiPC + NEET</option>
+                    <option value="CEC">CEC</option>
+                </select>
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Batch</label>
-                <div className="text-sm font-bold text-slate-800 leading-tight">{context.batch}</div>
+                <select
+                    value={context.batch}
+                    onChange={async (e) => {
+                        const newContext = { ...context, batch: e.target.value };
+                        setContext(newContext);
+                        setIsProcessing(true);
+                        const data = await AttendanceService.getEligibleStudents(newContext);
+                        setStudents(data);
+                        setIsProcessing(false);
+                    }}
+                    disabled={sessionState !== 'DRAFT' && sessionState !== 'RETURNED'}
+                    className="w-full bg-transparent text-sm font-bold text-slate-800 cursor-pointer focus:outline-none disabled:opacity-50"
+                >
+                    <option value="JEE Advanced A">JEE Advanced A</option>
+                    <option value="JEE Mains B">JEE Mains B</option>
+                    <option value="NEET A">NEET A</option>
+                    <option value="CEC General">CEC General</option>
+                </select>
             </div>
             <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Section</label>
-                <div className="text-sm font-black text-indigo-600 text-center leading-tight">{context.section}</div>
+                <select
+                    value={context.section}
+                    onChange={async (e) => {
+                        const newContext = { ...context, section: e.target.value };
+                        setContext(newContext);
+                        setIsProcessing(true);
+                        const data = await AttendanceService.getEligibleStudents(newContext);
+                        setStudents(data);
+                        setIsProcessing(false);
+                    }}
+                    disabled={sessionState !== 'DRAFT' && sessionState !== 'RETURNED'}
+                    className="w-full bg-transparent text-sm font-black text-indigo-600 text-center cursor-pointer focus:outline-none disabled:opacity-50"
+                >
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                </select>
             </div>
             <div className="col-span-2 lg:col-span-1">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 ml-1">Date</label>
