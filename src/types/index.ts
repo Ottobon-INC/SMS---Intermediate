@@ -52,6 +52,7 @@ export interface Programme {
   code: string;
   name: string;
   yearLevel: 'First Year' | 'Second Year';
+  subjectIds?: string[];
   status: 'ACTIVE' | 'INACTIVE';
 }
 
@@ -78,10 +79,33 @@ export interface Section {
 export interface Subject {
   id: string;
   institutionId: string;
-  programmeId: string;
+  programmeId?: string;
   code: string;
   name: string;
+  maxMarks: number;
+  passMarks: number;
   status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface BranchCourseOffering {
+  id: string;
+  institutionId: string;
+  branchId: string;
+  academicYearId: string;
+  programmeId: string;
+  status: 'ACTIVE' | 'DISCONTINUED';
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface BranchSubjectOffering {
+  id: string;
+  branchCourseOfferingId: string;
+  subjectId: string;
+  maxMarks: number;
+  passMarks: number;
+  isOptional: boolean;
+  status: 'ACTIVE' | 'DISCONTINUED';
 }
 
 export interface Student {
@@ -271,9 +295,16 @@ export interface AttendanceEntry {
 export interface Exam {
   id: string;
   institutionId: string;
+  scope: 'ALL_BRANCHES' | 'SELECTED_BRANCHES' | 'SINGLE_BRANCH';
   branchId: string;
+  branchIds: string[];
+  excludedBranchIds?: string[];
+  exemptionReasons?: Record<string, string>;
   academicYearId: string;
   programmeId: string;
+  programmeIds?: string[];
+  batchIds?: string[];
+  sectionIds?: string[];
   name: string;
   type: string;
   examDate: string;
@@ -288,8 +319,12 @@ export interface ExamSubject {
   id: string;
   examId: string;
   subjectId: string;
+  subjectName: string;
+  subjectCode: string;
   maximumMarks: number;
   passMarks: number;
+  exemptedBranchIds?: string[];
+  exemptedBatchIds?: string[];
 }
 
 export interface ExamSection {
@@ -297,6 +332,23 @@ export interface ExamSection {
   examId: string;
   batchId: string;
   sectionId: string;
+}
+
+export interface StudentExamRecord {
+  id: string;
+  examId: string;
+  enrollmentId: string;
+  studentId: string;
+  sectionId?: string;
+  subjectMarks: Record<string, number>; // subjectId -> mark (-1: ABSENT, -2: EXEMPTED, -3: MALPRACTICE)
+  totalMarks?: number;
+  maxTotalMarks?: number;
+  percentage?: number;
+  resultStatus?: 'Pass' | 'Fail';
+  grade?: string;
+  status: 'DRAFT' | 'SUBMITTED' | 'RETURNED_FOR_CORRECTION' | 'APPROVED' | 'PUBLISHED';
+  enteredBy: string;
+  updatedAt: string;
 }
 
 export interface Mark {

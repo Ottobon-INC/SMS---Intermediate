@@ -31,11 +31,15 @@ import {
   AuditEvent,
   ImportBatch,
   ImportRow,
+  BranchCourseOffering,
+  BranchSubjectOffering,
+  StudentExamRecord,
 } from '@/src/types';
 
 import {
   seedInstitution,
   seedBranch,
+  seedBranches,
   seedAcademicYear,
   seedProgrammes,
   seedBatches,
@@ -64,6 +68,9 @@ import {
   seedNotificationEvents,
   seedAuditEvents,
   seedImportBatches,
+  seedBranchCourseOfferings,
+  seedBranchSubjectOfferings,
+  seedStudentExamRecords,
 } from '@/src/data/seedData';
 
 import { initFirebase } from './firebase';
@@ -155,7 +162,7 @@ class DataRepository {
   }
 
   public getBranches(): Branch[] {
-    const branches = getStorage<Branch[]>('branches', [seedBranch]);
+    const branches = getStorage<Branch[]>('branches', seedBranches);
     if (!Array.isArray(branches)) {
       const single = getStorage('branch', seedBranch);
       return [single];
@@ -222,6 +229,65 @@ class DataRepository {
 
   public getSubjects(): Subject[] {
     return getStorage('subjects', seedSubjects);
+  }
+
+  public addSubject(subject: Subject): Subject {
+    const list = this.getSubjects();
+    list.unshift(subject);
+    setStorage('subjects', list);
+    return subject;
+  }
+
+  public getBranchCourseOfferings(branchId?: string, academicYearId?: string): BranchCourseOffering[] {
+    const list = getStorage<BranchCourseOffering[]>('branchCourseOfferings', seedBranchCourseOfferings);
+    return list.filter((bco) => {
+      if (branchId && bco.branchId !== branchId) return false;
+      if (academicYearId && bco.academicYearId !== academicYearId) return false;
+      return true;
+    });
+  }
+
+  public addBranchCourseOffering(offering: BranchCourseOffering): BranchCourseOffering {
+    const list = getStorage<BranchCourseOffering[]>('branchCourseOfferings', seedBranchCourseOfferings);
+    list.unshift(offering);
+    setStorage('branchCourseOfferings', list);
+    return offering;
+  }
+
+  public getBranchSubjectOfferings(branchCourseOfferingId?: string): BranchSubjectOffering[] {
+    const list = getStorage<BranchSubjectOffering[]>('branchSubjectOfferings', seedBranchSubjectOfferings);
+    if (branchCourseOfferingId) {
+      return list.filter((bso) => bso.branchCourseOfferingId === branchCourseOfferingId);
+    }
+    return list;
+  }
+
+  public addBranchSubjectOffering(offering: BranchSubjectOffering): BranchSubjectOffering {
+    const list = getStorage<BranchSubjectOffering[]>('branchSubjectOfferings', seedBranchSubjectOfferings);
+    list.unshift(offering);
+    setStorage('branchSubjectOfferings', list);
+    return offering;
+  }
+
+  public getStudentExamRecords(examId?: string, sectionId?: string): StudentExamRecord[] {
+    const list = getStorage<StudentExamRecord[]>('studentExamRecords', seedStudentExamRecords);
+    return list.filter((ser) => {
+      if (examId && ser.examId !== examId) return false;
+      if (sectionId && ser.sectionId !== sectionId) return false;
+      return true;
+    });
+  }
+
+  public setStudentExamRecord(record: StudentExamRecord): StudentExamRecord {
+    const list = getStorage<StudentExamRecord[]>('studentExamRecords', seedStudentExamRecords);
+    const idx = list.findIndex((r) => r.examId === record.examId && r.studentId === record.studentId);
+    if (idx !== -1) {
+      list[idx] = record;
+    } else {
+      list.unshift(record);
+    }
+    setStorage('studentExamRecords', list);
+    return record;
   }
 
   // USERS

@@ -44,8 +44,12 @@ export const Header: React.FC<HeaderProps> = ({ title, onOpenMobileMenu }) => {
               <span className="font-bold tracking-tight text-white text-base lg:text-lg">
                 Sri Vignan Intermediate College
               </span>
-              <span className="hidden sm:inline-block bg-slate-800 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded border border-slate-700">
-                HYD-MAIN
+              <span className="hidden sm:inline-block bg-teal-900/60 text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded border border-teal-700/60">
+                {currentUser?.branchId === 'branch-vja-city'
+                  ? 'VJA-CITY'
+                  : currentUser?.branchId === 'branch-vizag-coast'
+                  ? 'VIZAG-COAST'
+                  : 'HYD-MAIN'}
               </span>
             </div>
             {title && <p className="text-xs text-teal-400 font-medium">{title}</p>}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
 import { dbRepository } from '@/src/services/db';
 import { Student } from '@/src/types';
 import { Modal } from '@/src/modules/core/components/Modal';
@@ -8,11 +9,27 @@ export const StudentDirectoryPage: React.FC = () => {
   const students = dbRepository.getStudents();
   const guardians = dbRepository.getGuardians();
   const links = dbRepository.getStudentGuardianLinks();
+  const enrollments = dbRepository.getEnrollments();
+  const branches = dbRepository.getBranches();
+
+  const { currentUser } = useAuth();
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
+  const isPrincipal = currentUser?.role === 'BRANCH_ADMIN';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [branchFilter, setBranchFilter] = useState<string>('ALL');
 
   const filteredStudents = students.filter((s) => {
+    // 1. Filter by branch
+    const enrollment = enrollments.find(e => e.studentId === s.id); // For MVP, assume latest enrollment
+    if (isDean && branchFilter !== 'ALL') {
+      if (enrollment?.branchId !== branchFilter) return false;
+    } else if (!isDean && currentUser?.branchId) {
+      if (enrollment?.branchId !== currentUser.branchId) return false;
+    }
+
+    // 2. Filter by search
     return `${s.firstName} ${s.lastName} ${s.admissionNumber}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -36,9 +53,26 @@ export const StudentDirectoryPage: React.FC = () => {
             Enrolled student list, guardian contact info, programme allocations, and individual student ledgers.
           </p>
         </div>
-        <span className="text-xs bg-slate-100 text-slate-800 font-bold px-3 py-1.5 rounded-xl border border-slate-200">
-          Total Enrolled: {students.length}
-        </span>
+        <div className="flex items-center gap-3">
+          {isDean && (
+            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+              >
+                <option value="ALL">All Branches</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <span className="text-xs bg-slate-100 text-slate-800 font-bold px-3 py-1.5 rounded-xl border border-slate-200">
+            Total Enrolled: {filteredStudents.length}
+          </span>
+        </div>
       </div>
 
       {/* Filter Bar */}

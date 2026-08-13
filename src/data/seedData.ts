@@ -30,6 +30,9 @@ import {
   AuditEvent,
   ImportBatch,
   ImportRow,
+  BranchCourseOffering,
+  BranchSubjectOffering,
+  StudentExamRecord,
 } from '@/src/types';
 
 export const INSTITUTION_ID = 'inst-svic-01';
@@ -58,6 +61,28 @@ export const seedBranch: Branch = {
   status: 'ACTIVE',
 };
 
+export const seedBranchVja: Branch = {
+  id: 'branch-vja-city',
+  institutionId: INSTITUTION_ID,
+  code: 'VJA-CITY',
+  name: 'City Campus – Vijayawada',
+  address: '45-B, Benz Circle, Vijayawada, Andhra Pradesh',
+  phone: '+91 90000 20000',
+  status: 'ACTIVE',
+};
+
+export const seedBranchVizag: Branch = {
+  id: 'branch-vizag-coast',
+  institutionId: INSTITUTION_ID,
+  code: 'VIZAG-COAST',
+  name: 'Coastal Campus – Visakhapatnam',
+  address: '8-12, Beach Road, Visakhapatnam, Andhra Pradesh',
+  phone: '+91 90000 30000',
+  status: 'ACTIVE',
+};
+
+export const seedBranches: Branch[] = [seedBranch, seedBranchVja, seedBranchVizag];
+
 export const seedAcademicYear: AcademicYear = {
   id: ACADEMIC_YEAR_ID,
   institutionId: INSTITUTION_ID,
@@ -68,10 +93,10 @@ export const seedAcademicYear: AcademicYear = {
 };
 
 export const seedProgrammes: Programme[] = [
-  { id: 'prog-mpc', institutionId: INSTITUTION_ID, code: 'MPC', name: 'Mathematics, Physics, Chemistry', yearLevel: 'First Year', status: 'ACTIVE' },
-  { id: 'prog-bipc', institutionId: INSTITUTION_ID, code: 'BiPC', name: 'Biology, Physics, Chemistry', yearLevel: 'First Year', status: 'ACTIVE' },
-  { id: 'prog-mec', institutionId: INSTITUTION_ID, code: 'MEC', name: 'Mathematics, Economics, Commerce', yearLevel: 'First Year', status: 'ACTIVE' },
-  { id: 'prog-cec', institutionId: INSTITUTION_ID, code: 'CEC', name: 'Civics, Economics, Commerce', yearLevel: 'First Year', status: 'ACTIVE' },
+  { id: 'prog-mpc', institutionId: INSTITUTION_ID, code: 'MPC', name: 'Mathematics, Physics, Chemistry', yearLevel: 'First Year', subjectIds: ['sub-math', 'sub-phy', 'sub-chem', 'sub-eng'], status: 'ACTIVE' },
+  { id: 'prog-bipc', institutionId: INSTITUTION_ID, code: 'BiPC', name: 'Biology, Physics, Chemistry', yearLevel: 'First Year', subjectIds: ['sub-bot', 'sub-zoo', 'sub-phy', 'sub-chem', 'sub-eng'], status: 'ACTIVE' },
+  { id: 'prog-mec', institutionId: INSTITUTION_ID, code: 'MEC', name: 'Mathematics, Economics, Commerce', yearLevel: 'First Year', subjectIds: ['sub-math', 'sub-eco', 'sub-com', 'sub-eng'], status: 'ACTIVE' },
+  { id: 'prog-cec', institutionId: INSTITUTION_ID, code: 'CEC', name: 'Civics, Economics, Commerce', yearLevel: 'First Year', subjectIds: ['sub-civ', 'sub-eco', 'sub-com', 'sub-eng'], status: 'ACTIVE' },
 ];
 
 export const seedBatches: Batch[] = [
@@ -86,18 +111,33 @@ export const seedSections: Section[] = [
   { id: 'sec-mpc-b', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, batchId: 'batch-mpc-1', code: 'MPC-B', name: 'MPC-B', status: 'ACTIVE' },
   { id: 'sec-bipc-a', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, batchId: 'batch-bipc-1', code: 'BiPC-A', name: 'BiPC-A', status: 'ACTIVE' },
   { id: 'sec-mec-a', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, batchId: 'batch-mec-1', code: 'MEC-A', name: 'MEC-A', status: 'ACTIVE' },
+  { id: 'sec-cec-a', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, batchId: 'batch-cec-1', code: 'CEC-A', name: 'CEC-A', status: 'ACTIVE' },
 ];
 
 export const seedSubjects: Subject[] = [
-  { id: 'sub-math', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'MATH', name: 'Mathematics', status: 'ACTIVE' },
-  { id: 'sub-phy', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'PHY', name: 'Physics', status: 'ACTIVE' },
-  { id: 'sub-chem', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'CHEM', name: 'Chemistry', status: 'ACTIVE' },
-  { id: 'sub-bot', institutionId: INSTITUTION_ID, programmeId: 'prog-bipc', code: 'BOT', name: 'Botany', status: 'ACTIVE' },
-  { id: 'sub-zoo', institutionId: INSTITUTION_ID, programmeId: 'prog-bipc', code: 'ZOO', name: 'Zoology', status: 'ACTIVE' },
-  { id: 'sub-eng', institutionId: INSTITUTION_ID, programmeId: 'prog-mpc', code: 'ENG', name: 'English', status: 'ACTIVE' },
-  { id: 'sub-eco', institutionId: INSTITUTION_ID, programmeId: 'prog-mec', code: 'ECO', name: 'Economics', status: 'ACTIVE' },
-  { id: 'sub-com', institutionId: INSTITUTION_ID, programmeId: 'prog-mec', code: 'COM', name: 'Commerce', status: 'ACTIVE' },
-  { id: 'sub-civ', institutionId: INSTITUTION_ID, programmeId: 'prog-cec', code: 'CIV', name: 'Civics', status: 'ACTIVE' },
+  { id: 'sub-math', institutionId: INSTITUTION_ID, code: 'MATH', name: 'Mathematics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-phy', institutionId: INSTITUTION_ID, code: 'PHY', name: 'Physics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-chem', institutionId: INSTITUTION_ID, code: 'CHEM', name: 'Chemistry', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-bot', institutionId: INSTITUTION_ID, code: 'BOT', name: 'Botany', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-zoo', institutionId: INSTITUTION_ID, code: 'ZOO', name: 'Zoology', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-eng', institutionId: INSTITUTION_ID, code: 'ENG', name: 'English', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-eco', institutionId: INSTITUTION_ID, code: 'ECO', name: 'Economics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-com', institutionId: INSTITUTION_ID, code: 'COM', name: 'Commerce', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+  { id: 'sub-civ', institutionId: INSTITUTION_ID, code: 'CIV', name: 'Civics', maxMarks: 100, passMarks: 35, status: 'ACTIVE' },
+];
+
+export const seedBranchCourseOfferings: BranchCourseOffering[] = [
+  { id: 'bco-hyd-mpc', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, academicYearId: ACADEMIC_YEAR_ID, programmeId: 'prog-mpc', status: 'ACTIVE', createdBy: 'user-dean', createdAt: '2026-05-01T00:00:00Z' },
+  { id: 'bco-hyd-bipc', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, academicYearId: ACADEMIC_YEAR_ID, programmeId: 'prog-bipc', status: 'ACTIVE', createdBy: 'user-dean', createdAt: '2026-05-01T00:00:00Z' },
+  { id: 'bco-hyd-mec', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, academicYearId: ACADEMIC_YEAR_ID, programmeId: 'prog-mec', status: 'ACTIVE', createdBy: 'user-dean', createdAt: '2026-05-01T00:00:00Z' },
+  { id: 'bco-hyd-cec', institutionId: INSTITUTION_ID, branchId: BRANCH_ID, academicYearId: ACADEMIC_YEAR_ID, programmeId: 'prog-cec', status: 'ACTIVE', createdBy: 'user-dean', createdAt: '2026-05-01T00:00:00Z' },
+];
+
+export const seedBranchSubjectOfferings: BranchSubjectOffering[] = [
+  { id: 'bso-mpc-math', branchCourseOfferingId: 'bco-hyd-mpc', subjectId: 'sub-math', maxMarks: 100, passMarks: 35, isOptional: false, status: 'ACTIVE' },
+  { id: 'bso-mpc-phy', branchCourseOfferingId: 'bco-hyd-mpc', subjectId: 'sub-phy', maxMarks: 100, passMarks: 35, isOptional: false, status: 'ACTIVE' },
+  { id: 'bso-mpc-chem', branchCourseOfferingId: 'bco-hyd-mpc', subjectId: 'sub-chem', maxMarks: 100, passMarks: 35, isOptional: false, status: 'ACTIVE' },
+  { id: 'bso-mpc-eng', branchCourseOfferingId: 'bco-hyd-mpc', subjectId: 'sub-eng', maxMarks: 100, passMarks: 35, isOptional: false, status: 'ACTIVE' },
 ];
 
 export const seedGuardians: Guardian[] = [
@@ -141,6 +181,32 @@ export const seedUsers: User[] = [
     fullName: 'Mr. Raghav Reddy',
     email: 'principal@demo-college.in',
     mobile: '+91 90000 10002',
+    role: 'BRANCH_ADMIN',
+    status: 'ACTIVE',
+    temporaryPassword: 'Demo@123',
+    createdBy: 'user-dean',
+    createdAt: '2026-05-02T00:00:00Z',
+  },
+  {
+    id: 'user-principal-vja',
+    institutionId: INSTITUTION_ID,
+    branchId: 'branch-vja-city',
+    fullName: 'Mr. K. V. Rao',
+    email: 'principal.vja@demo-college.in',
+    mobile: '+91 90000 20002',
+    role: 'BRANCH_ADMIN',
+    status: 'ACTIVE',
+    temporaryPassword: 'Demo@123',
+    createdBy: 'user-dean',
+    createdAt: '2026-05-02T00:00:00Z',
+  },
+  {
+    id: 'user-principal-vizag',
+    institutionId: INSTITUTION_ID,
+    branchId: 'branch-vizag-coast',
+    fullName: 'Mrs. S. Lakshmi',
+    email: 'principal.vizag@demo-college.in',
+    mobile: '+91 90000 30002',
     role: 'BRANCH_ADMIN',
     status: 'ACTIVE',
     temporaryPassword: 'Demo@123',
@@ -445,9 +511,13 @@ export const seedExams: Exam[] = [
   {
     id: 'exam-1',
     institutionId: INSTITUTION_ID,
+    scope: 'SINGLE_BRANCH',
     branchId: BRANCH_ID,
+    branchIds: [BRANCH_ID],
     academicYearId: ACADEMIC_YEAR_ID,
     programmeId: 'prog-mpc',
+    batchIds: ['batch-mpc-1'],
+    sectionIds: ['sec-mpc-a'],
     name: 'Monthly Test 1',
     type: 'Monthly Assessment',
     examDate: '2026-07-25',
@@ -459,9 +529,13 @@ export const seedExams: Exam[] = [
   {
     id: 'exam-2',
     institutionId: INSTITUTION_ID,
+    scope: 'SINGLE_BRANCH',
     branchId: BRANCH_ID,
+    branchIds: [BRANCH_ID],
     academicYearId: ACADEMIC_YEAR_ID,
     programmeId: 'prog-mpc',
+    batchIds: ['batch-mpc-1'],
+    sectionIds: ['sec-mpc-a'],
     name: 'Unit Test 2',
     type: 'Unit Assessment',
     examDate: '2026-08-05',
@@ -470,18 +544,37 @@ export const seedExams: Exam[] = [
     createdBy: 'user-principal',
     createdAt: '2026-08-01T09:00:00Z',
   },
+  {
+    id: 'exam-3',
+    institutionId: INSTITUTION_ID,
+    scope: 'ALL_BRANCHES',
+    branchId: BRANCH_ID,
+    branchIds: [BRANCH_ID, 'branch-vja-city', 'branch-vizag-coast'],
+    excludedBranchIds: ['branch-vizag-coast'],
+    exemptionReasons: { 'branch-vizag-coast': 'Coastal cyclone alert local holiday' },
+    academicYearId: ACADEMIC_YEAR_ID,
+    programmeId: 'prog-mpc',
+    programmeIds: ['prog-mpc', 'prog-mec', 'prog-cec'],
+    name: 'State-wide Grand Pre-Final 2026',
+    type: 'Grand Test',
+    examDate: '2026-08-28',
+    marksEntryDeadline: '2026-08-31',
+    status: 'DRAFT',
+    createdBy: 'user-dean',
+    createdAt: '2026-08-10T09:00:00Z',
+  },
 ];
 
 export const seedExamSubjects: ExamSubject[] = [
-  { id: 'exsub-1', examId: 'exam-1', subjectId: 'sub-math', maximumMarks: 100, passMarks: 35 },
-  { id: 'exsub-2', examId: 'exam-1', subjectId: 'sub-phy', maximumMarks: 100, passMarks: 35 },
-  { id: 'exsub-3', examId: 'exam-1', subjectId: 'sub-chem', maximumMarks: 100, passMarks: 35 },
-  { id: 'exsub-4', examId: 'exam-1', subjectId: 'sub-eng', maximumMarks: 100, passMarks: 35 },
+  { id: 'exsub-1', examId: 'exam-1', subjectId: 'sub-math', subjectName: 'Mathematics', subjectCode: 'MATH', maximumMarks: 100, passMarks: 35 },
+  { id: 'exsub-2', examId: 'exam-1', subjectId: 'sub-phy', subjectName: 'Physics', subjectCode: 'PHY', maximumMarks: 100, passMarks: 35 },
+  { id: 'exsub-3', examId: 'exam-1', subjectId: 'sub-chem', subjectName: 'Chemistry', subjectCode: 'CHEM', maximumMarks: 100, passMarks: 35 },
+  { id: 'exsub-4', examId: 'exam-1', subjectId: 'sub-eng', subjectName: 'English', subjectCode: 'ENG', maximumMarks: 100, passMarks: 35 },
 
-  { id: 'exsub-5', examId: 'exam-2', subjectId: 'sub-math', maximumMarks: 50, passMarks: 18 },
-  { id: 'exsub-6', examId: 'exam-2', subjectId: 'sub-phy', maximumMarks: 50, passMarks: 18 },
-  { id: 'exsub-7', examId: 'exam-2', subjectId: 'sub-chem', maximumMarks: 50, passMarks: 18 },
-  { id: 'exsub-8', examId: 'exam-2', subjectId: 'sub-eng', maximumMarks: 50, passMarks: 18 },
+  { id: 'exsub-5', examId: 'exam-2', subjectId: 'sub-math', subjectName: 'Mathematics', subjectCode: 'MATH', maximumMarks: 50, passMarks: 18 },
+  { id: 'exsub-6', examId: 'exam-2', subjectId: 'sub-phy', subjectName: 'Physics', subjectCode: 'PHY', maximumMarks: 50, passMarks: 18 },
+  { id: 'exsub-7', examId: 'exam-2', subjectId: 'sub-chem', subjectName: 'Chemistry', subjectCode: 'CHEM', maximumMarks: 50, passMarks: 18 },
+  { id: 'exsub-8', examId: 'exam-2', subjectId: 'sub-eng', subjectName: 'English', subjectCode: 'ENG', maximumMarks: 50, passMarks: 18 },
 ];
 
 export const seedExamSections: ExamSection[] = [
@@ -817,3 +910,30 @@ export const seedImportBatches: ImportBatch[] = [
     confirmedAt: '2026-06-01T10:30:00Z',
   },
 ];
+
+export const seedStudentExamRecords: StudentExamRecord[] = [
+  {
+    id: 'ser-ex1-st1',
+    examId: 'exam-1',
+    enrollmentId: 'enr-1',
+    studentId: 'student-1',
+    sectionId: 'sec-mpc-a',
+    subjectMarks: {
+      'sub-math': 82,
+      'sub-phy': 75,
+      'sub-chem': 79,
+      'sub-eng': 80,
+    },
+    totalMarks: 316,
+    maxTotalMarks: 400,
+    percentage: 79,
+    resultStatus: 'Pass',
+    grade: 'B',
+    status: 'PUBLISHED',
+    enteredBy: 'user-office',
+    updatedAt: '2026-07-27T10:00:00Z',
+  },
+];
+// Updated seedData exports
+
+

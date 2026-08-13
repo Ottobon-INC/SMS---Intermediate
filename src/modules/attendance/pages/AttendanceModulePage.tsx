@@ -5,7 +5,9 @@ import { AttendanceGrid } from '../components/AttendanceGrid';
 import { AttendanceService } from '../services/AttendanceService';
 import { AttendanceContext, AttendanceWorkflowState, StudentAttendanceRecord } from '../types';
 import { ModulePermissions } from '../permissions';
-import { Save, Check, FileWarning, ArrowLeft, RefreshCw, ArrowRight, Clock, AlertCircle } from 'lucide-react';
+import { Save, Check, FileWarning, ArrowLeft, RefreshCw, ArrowRight, Clock, AlertCircle, CalendarCheck, CheckCircle2, ShieldCheck, MessageSquare, Filter } from 'lucide-react';
+import { WhatsAppModal } from '@/src/modules/notifications/components/WhatsAppModal';
+import { dbRepository } from '@/src/services/db';
 
 export const AttendanceModulePage: React.FC = () => {
   const { currentUser } = useAuth();
@@ -187,8 +189,9 @@ export const AttendanceModulePage: React.FC = () => {
                         }}
                         className="w-full bg-transparent text-sm font-bold text-slate-800 cursor-pointer focus:outline-none"
                     >
-                        <option value="Visakhapatnam Campus">Visakhapatnam Campus</option>
-                        <option value="Hyderabad Campus">Hyderabad Campus</option>
+                        {dbRepository.getBranches().map(b => (
+                            <option key={b.id} value={b.name}>{b.name}</option>
+                        ))}
                     </select>
                 ) : (
                     <div className="text-sm font-bold text-slate-800 leading-tight">{context.branch}</div>

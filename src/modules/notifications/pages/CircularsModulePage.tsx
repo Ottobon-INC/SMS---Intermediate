@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { dbRepository } from '@/src/services/db';
+import { NotificationsService } from '@/src/modules/notifications/services/NotificationsService';
 import { Circular } from '@/src/types';
 import { useAuth } from '@/src/modules/auth-and-users/context/AuthContext';
-import { Megaphone, Plus, Paperclip } from 'lucide-react';
+import { Megaphone, Plus, Paperclip, Filter, MessageSquare, X, CheckCircle2 } from 'lucide-react';
 import { Modal } from '@/src/modules/core/components/Modal';
+import { WhatsAppPreview } from '@/src/modules/notifications/components/WhatsAppPreview';
 
 export const CircularsModulePage: React.FC = () => {
   const { currentUser, triggerRefresh } = useAuth();
-  const [circulars, setCirculars] = useState<Circular[]>(() => dbRepository.getCirculars());
+  const [circulars, setCirculars] = useState<Circular[]>(() => NotificationsService.getCirculars());
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [branchFilter, setBranchFilter] = useState<string>('ALL'); // Dean-only filter
 
   const canPublish = currentUser?.role !== 'PARENT_GUARDIAN';
+  const isDean = currentUser?.role === 'INSTITUTION_ADMIN';
 
   // Form
   const [title, setTitle] = useState('');
@@ -18,8 +21,12 @@ export const CircularsModulePage: React.FC = () => {
   const [message, setMessage] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
 
+  // WhatsApp Preview Modal
+  const [showWhatsAppPreviewModal, setShowWhatsAppPreviewModal] = useState(false);
+  const [previewMessage, setPreviewMessage] = useState('');
+
   const refreshData = () => {
-    setCirculars(dbRepository.getCirculars());
+    setCirculars(NotificationsService.getCirculars());
     triggerRefresh();
   };
 
@@ -28,8 +35,8 @@ export const CircularsModulePage: React.FC = () => {
     if (!canPublish) return;
     const newCirc: Circular = {
       id: `circ-${Date.now()}`,
-      institutionId: 'inst-svic-01',
-      branchId: 'branch-hyd-main',
+      institutionId: currentUser?.institutionId || 'inst-svic-01',
+      branchId: currentUser?.branchId || 'branch-hyd-main',
       title,
       category,
       message,
@@ -41,31 +48,49 @@ export const CircularsModulePage: React.FC = () => {
       status: 'PUBLISHED',
     };
 
-    dbRepository.addCircular(newCirc);
+    NotificationsService.addCircular(newCirc);
+
+    const waMsg = `Dear Parent,\n\n${title}\n\n${message}\n\nRegards,\nSri Vignan Intermediate College`;
 
     // Enqueue broadcast notification
-    dbRepository.addNotificationEvent({
+    NotificationsService.addNotificationEvent({
       id: `notif-${Date.now()}`,
-      institutionId: 'inst-svic-01',
-      branchId: 'branch-hyd-main',
+      institutionId: currentUser?.institutionId || 'inst-svic-01',
+      branchId: currentUser?.branchId || 'branch-hyd-main',
       studentId: 'student-1',
       guardianId: 'guard-1',
       sourceModule: 'Circulars',
       sourceRecordId: newCirc.id,
       recipientMobile: '9000020001',
       eventType: 'CIRCULAR_PUBLISHED',
-      resolvedMessage: `Dear Parent,\n\n${title}\n\n${message}\n\nRegards,\nSri Vignan Intermediate College`,
+      resolvedMessage: waMsg,
       status: 'DELIVERED',
       createdAt: new Date().toISOString(),
       retryCount: 0,
     });
 
+    setPreviewMessage(waMsg);
+    
     refreshData();
     setShowCreateModal(false);
     setTitle('');
     setMessage('');
-    alert('Official circular published and broadcasted to Parent WhatsApp Portal!');
+    
+    // Show preview instead of alert
+    setShowWhatsAppPreviewModal(true);
   };
+
+  const filteredCirculars = circulars.filter((circ) => {
+    // Non-Dean users only see their branch
+    if (!isDean && currentUser?.branchId && circ.branchId !== currentUser.branchId) {
+      return false;
+    }
+    // Dean branch filter
+    if (isDean && branchFilter !== 'ALL' && circ.branchId !== branchFilter) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -80,20 +105,38 @@ export const CircularsModulePage: React.FC = () => {
           </p>
         </div>
 
-        {canPublish && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition-all"
-            id="publish-circular-button"
-          >
-            <Plus className="w-4 h-4 text-teal-400" /> Publish New Circular
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {isDean && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 outline-none"
+              >
+                <option value="ALL">All Branches</option>
+                <option value="branch-hyd-main">Hyderabad Main Campus</option>
+                <option value="branch-vzg-north">Visakhapatnam North</option>
+                <option value="branch-vja-east">Vijayawada East</option>
+              </select>
+            </div>
+          )}
+
+          {canPublish && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2 transition-all"
+              id="publish-circular-button"
+            >
+              <Plus className="w-4 h-4 text-teal-400" /> Publish New Circular
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List */}
       <div className="space-y-4">
-        {circulars.map((circ) => (
+        {filteredCirculars.map((circ) => (
           <div key={circ.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-3">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-2">
@@ -104,6 +147,7 @@ export const CircularsModulePage: React.FC = () => {
                   <h3 className="font-bold text-slate-900 text-sm">{circ.title}</h3>
                   <span className="text-[10px] text-slate-400">
                     Published on {new Date(circ.publishedAt || circ.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {isDean && ` • Branch: ${circ.branchId}`}
                   </span>
                 </div>
               </div>
@@ -124,6 +168,12 @@ export const CircularsModulePage: React.FC = () => {
             )}
           </div>
         ))}
+
+        {filteredCirculars.length === 0 && (
+          <div className="text-center text-slate-500 py-10 font-medium bg-white rounded-3xl border border-slate-200 shadow-xs">
+            No circulars found.
+          </div>
+        )}
       </div>
 
       {/* Modal */}
@@ -195,6 +245,67 @@ export const CircularsModulePage: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* WHATSAPP MESSAGE PREVIEW MODAL */}
+      {showWhatsAppPreviewModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Circular Published & Broadcasted</h3>
+                  <p className="text-xs text-slate-500">Live preview of automated parent WhatsApp notification</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWhatsAppPreviewModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* WhatsApp Chat Simulation Card */}
+            <div className="bg-emerald-950/90 p-4 rounded-2xl border border-emerald-800 text-xs space-y-3 font-sans shadow-inner">
+              <div className="flex justify-between items-center border-b border-emerald-800/60 pb-2">
+                <div className="flex items-center gap-2 text-emerald-100 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  WhatsApp Official Alert Engine
+                </div>
+                <span className="text-[10px] text-emerald-300 font-mono">Broadcast to Parents</span>
+              </div>
+
+              {/* Message Bubble */}
+              <div className="bg-emerald-900/90 text-emerald-50 p-3.5 rounded-2xl border border-emerald-700/50 space-y-2 whitespace-pre-wrap font-mono leading-relaxed text-[11px] shadow-sm">
+                {previewMessage}
+                <div className="flex justify-end items-center gap-1 text-[9px] text-emerald-300 font-mono mt-1">
+                  <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-teal-300 font-bold">✓✓ Delivered</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                Circular is now visible on student dashboards and broadcasted via WhatsApp!
+              </span>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowWhatsAppPreviewModal(false)}
+                className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800"
+              >
+                Done & Return
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
