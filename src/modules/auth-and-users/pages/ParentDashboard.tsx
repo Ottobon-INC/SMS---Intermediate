@@ -56,7 +56,7 @@ export const ParentDashboard: React.FC<ParentDashboardProps> = ({ onNavigate }) 
               Admission: <strong className="text-white">{student?.admissionNumber}</strong> • Roll No: <strong className="text-white">MPC-A-01</strong>
             </p>
             <p className="text-xs text-teal-300">
-              Sri Vignan Intermediate College • First Year MPC (MPC-A)
+              Vaagdevi Educational Institutions • First Year MPC (MPC-A)
             </p>
           </div>
         </div>

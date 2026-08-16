@@ -246,7 +246,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectPortal, onDire
       <footer className="relative z-10 border-t border-white/10 bg-[#0A0A0B] py-12 text-center px-6">
         <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
           <School className="w-5 h-5 text-white" />
-          <span className="text-sm font-bold text-white tracking-wider uppercase">Ottobon SMS</span>
+          <span className="text-sm font-bold text-white tracking-wider uppercase">Vaagdevi SMS</span>
         </div>
         <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
           This is a demonstration application. All data, including student records and simulated WhatsApp messages, is entirely fictional.

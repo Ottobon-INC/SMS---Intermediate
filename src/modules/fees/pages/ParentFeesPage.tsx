@@ -11,7 +11,7 @@ export const ParentFeesPage: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900">Student Fee Ledger & Receipts</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Child: <strong>Ravi Kumar</strong> (SVI-2026-1001) • MPC-A First Year
+            Child: <strong>Ravi Kumar</strong> (VEI-2026-1001) • MPC-A First Year
           </p>
         </div>
         <div className="text-right">

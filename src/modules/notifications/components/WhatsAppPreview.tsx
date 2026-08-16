@@ -43,11 +43,11 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
   const presets: Record<NotificationEventType, { title: string; body: string }> = {
     ATTENDANCE_ABSENCE: {
       title: '1. Attendance Absence',
-      body: `Dear ${guardianName},\n\n${studentName} was marked absent on ${date} at Sri Vignan Intermediate College, Main Campus.\n\nPlease contact the college office if clarification is required.`,
+      body: `Dear ${guardianName},\n\n${studentName} was marked absent on ${date} at Vaagdevi Educational Institutions, Main Campus.\n\nPlease contact the college office if clarification is required.`,
     },
     ATTENDANCE_CORRECTION: {
       title: '2. Attendance Correction',
-      body: `Dear ${guardianName},\n\nAn attendance record for ${studentName} on ${date} at Sri Vignan Intermediate College was updated to Present following class teacher review.`,
+      body: `Dear ${guardianName},\n\nAn attendance record for ${studentName} on ${date} at Vaagdevi Educational Institutions was updated to Present following class teacher review.`,
     },
     FEE_ASSIGNED: {
       title: '3. Fee Assigned',
@@ -55,7 +55,7 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
     },
     FEE_DUE_REMINDER: {
       title: '4. Fee Due Reminder',
-      body: `Dear ${guardianName},\n\nAn outstanding fee amount of ₹${amount.toLocaleString('en-IN')} for ${studentName} is due on 15 Aug 2026.\n\nRegards,\nSri Vignan Intermediate College`,
+      body: `Dear ${guardianName},\n\nAn outstanding fee amount of ₹${amount.toLocaleString('en-IN')} for ${studentName} is due on 15 Aug 2026.\n\nRegards,\nVaagdevi Educational Institutions`,
     },
     FEE_OVERDUE: {
       title: '5. Fee Overdue',
@@ -63,11 +63,11 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
     },
     PAYMENT_CONFIRMATION: {
       title: '6. Payment Confirmation',
-      body: `Dear ${guardianName},\n\nA payment of ₹10,000 has been recorded for ${studentName} on ${date}.\n\nReceipt: SVI-2026-00125\nRemaining balance: ₹${amount.toLocaleString('en-IN')}\n\nRegards,\nSri Vignan Intermediate College`,
+      body: `Dear ${guardianName},\n\nA payment of ₹10,000 has been recorded for ${studentName} on ${date}.\n\nReceipt: VEI-2026-00125\nRemaining balance: ₹${amount.toLocaleString('en-IN')}\n\nRegards,\nVaagdevi Educational Institutions`,
     },
     EXAM_RESULT_PUBLISHED: {
       title: '7. Result Published',
-      body: `Dear ${guardianName},\n\nThe result for ${studentName} in Monthly Test 1 has been published.\n\nTotal: 316 / 400\nPercentage: 79%\nResult: Pass\n\nRegards,\nSri Vignan Intermediate College`,
+      body: `Dear ${guardianName},\n\nThe result for ${studentName} in Monthly Test 1 has been published.\n\nTotal: 316 / 400\nPercentage: 79%\nResult: Pass\n\nRegards,\nVaagdevi Educational Institutions`,
     },
     EXAM_RESULT_CORRECTED: {
       title: '8. Corrected Result',
@@ -75,7 +75,7 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
     },
     CIRCULAR_PUBLISHED: {
       title: '9. Circular Published',
-      body: `Dear Parent,\n\nThe college will remain closed on 15 August 2026 for Independence Day. Flag hoisting starts at 8:00 AM. Classes will resume on 16 August 2026.\n\nRegards,\nSri Vignan Intermediate College`,
+      body: `Dear Parent,\n\nThe college will remain closed on 15 August 2026 for Independence Day. Flag hoisting starts at 8:00 AM. Classes will resume on 16 August 2026.\n\nRegards,\nVaagdevi Educational Institutions`,
     },
   };
 
@@ -153,11 +153,11 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
           <div className="bg-[#075E54] text-white px-3 py-2 flex items-center justify-between shadow-md z-20">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-white text-[#075E54] font-bold text-xs flex items-center justify-center border border-emerald-300">
-                SVIC
+                VEI
               </div>
               <div>
                 <h4 className="text-xs font-semibold leading-tight">
-                  Sri Vignan College
+                  Vaagdevi Institutions
                 </h4>
                 <p className="text-[10px] text-emerald-100">Official Institution Account</p>
               </div>
@@ -185,7 +185,7 @@ export const WhatsAppPreview: React.FC<WhatsAppPreviewProps> = ({
             {/* Message Bubble */}
             <div className="bg-white rounded-lg p-3 shadow-xs max-w-[90%] self-start relative border-l-4 border-[#128C7E]">
               <div className="text-[10px] font-bold text-[#128C7E] mb-1">
-                Sri Vignan Intermediate College
+                Vaagdevi Educational Institutions
               </div>
               <p className="text-xs text-slate-800 whitespace-pre-line leading-relaxed">
                 {messageText}

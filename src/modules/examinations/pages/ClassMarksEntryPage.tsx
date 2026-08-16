@@ -609,7 +609,7 @@ export const ClassMarksEntryPage: React.FC<{ onBack?: () => void }> = ({ onBack 
         {previewReportCardStudent && (
           <div className="space-y-6 text-xs text-slate-700">
             <div className="text-center space-y-1 border-b border-slate-200 pb-4">
-              <h2 className="font-black text-xl text-slate-900 tracking-wide">SRI VIGNAN INTERMEDIATE COLLEGE</h2>
+              <h2 className="font-black text-xl text-slate-900 tracking-wide">VAAGDEVI EDUCATIONAL INSTITUTIONS</h2>
               <p className="text-xs text-teal-700 font-bold uppercase">{selectedExam?.name} - Report Card</p>
             </div>
 

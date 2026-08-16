@@ -108,7 +108,7 @@ export const ExamsModulePage: React.FC<{ onNavigateToMarksEntry?: () => void }> 
 
     const newExam: Exam = {
       id: `exam-${Date.now()}`,
-      institutionId: currentUser?.institutionId || 'inst-svic-01',
+      institutionId: currentUser?.institutionId || 'inst-vei-01',
       scope: examScope,
       branchId: isDean ? (targetBranchIds[0] || 'branch-hyd-main') : (currentUser?.branchId || branches[0]?.id || 'branch-hyd-main'),
       branchIds: targetBranchIds,

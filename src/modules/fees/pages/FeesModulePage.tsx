@@ -47,11 +47,11 @@ export const FeesModulePage: React.FC = () => {
     const student = students.find((s) => s.id === payStudentId);
     if (!student) return;
 
-    const receiptNo = `SVI-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+    const receiptNo = `VEI-2026-${Math.floor(10000 + Math.random() * 90000)}`;
 
     const newPayment: FeePayment = {
       id: `pay-${Date.now()}`,
-      institutionId: 'inst-svic-01',
+      institutionId: 'inst-vei-01',
       branchId: 'branch-hyd-main',
       feeAssignmentId: 'fee-1',
       studentId: student.id,
@@ -70,7 +70,7 @@ export const FeesModulePage: React.FC = () => {
     // Audit Event
     dbRepository.addAuditEvent({
       id: `audit-${Date.now()}`,
-      institutionId: 'inst-svic-01',
+      institutionId: 'inst-vei-01',
       branchId: 'branch-hyd-main',
       actorUserId: currentUser?.id || 'office-1',
       actorRole: currentUser?.role || 'OFFICE_STAFF',
@@ -86,11 +86,11 @@ export const FeesModulePage: React.FC = () => {
       'en-IN'
     )} has been recorded for ${student.firstName} ${
       student.lastName
-    }.\n\nReceipt: ${receiptNo}\nMethod: UPI\n\nRegards,\nSri Vignan Intermediate College`;
+    }.\n\nReceipt: ${receiptNo}\nMethod: UPI\n\nRegards,\nVaagdevi Educational Institutions`;
 
     dbRepository.addNotificationEvent({
       id: `notif-${Date.now()}`,
-      institutionId: 'inst-svic-01',
+      institutionId: 'inst-vei-01',
       branchId: 'branch-hyd-main',
       studentId: student.id,
       guardianId: 'guard-1',
@@ -117,7 +117,7 @@ export const FeesModulePage: React.FC = () => {
     targetStudents.forEach((st) => {
       const assignment: FeeAssignment = {
         id: `fee-${Date.now()}-${st.id}`,
-        institutionId: 'inst-svic-01',
+        institutionId: 'inst-vei-01',
         branchId: 'branch-hyd-main',
         enrollmentId: `enr-${st.id}`,
         studentId: st.id,
@@ -453,7 +453,7 @@ export const FeesModulePage: React.FC = () => {
         <Modal isOpen={!!selectedReceipt} onClose={() => setSelectedReceipt(null)} title="Official College Fee Receipt" maxWidth="lg">
           <div className="space-y-4 p-4 bg-white border border-slate-300 rounded-2xl font-sans text-xs">
             <div className="text-center border-b border-slate-300 pb-3">
-              <h2 className="text-base font-extrabold text-slate-900">SRI VIGNAN INTERMEDIATE COLLEGE</h2>
+              <h2 className="text-base font-extrabold text-slate-900">VAAGDEVI EDUCATIONAL INSTITUTIONS</h2>
               <p className="text-[10px] text-slate-500">Main Campus, Hyderabad • Tel: +91 40 2345 6789</p>
               <span className="text-xs font-bold bg-slate-100 px-3 py-1 rounded-full border border-slate-300 inline-block mt-2">
                 FEE PAYMENT RECEIPT

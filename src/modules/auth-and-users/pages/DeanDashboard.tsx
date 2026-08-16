@@ -47,7 +47,7 @@ export const DeanDashboard: React.FC<DeanDashboardProps> = ({ onNavigate }) => {
           <span className="text-xs text-teal-400 font-bold uppercase tracking-wider block mb-1">
             Institution Overview
           </span>
-          <h1 className="text-2xl font-extrabold tracking-tight">Sri Vignan Intermediate College</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">Vaagdevi Educational Institutions</h1>
           <p className="text-xs text-slate-300 mt-1">
             All Campuses • Academic Year 2026–2027 • Board of Intermediate Education
           </p>

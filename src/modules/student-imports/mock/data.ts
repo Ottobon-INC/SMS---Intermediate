@@ -32,7 +32,7 @@ export const mockImportHistory: ImportHistoryRecord[] = [
 export const mockStudentList: StudentListRecord[] = [
   {
     id: 'stu-1',
-    admissionNumber: 'SVI-2026-1001',
+    admissionNumber: 'VEI-2026-1001',
     studentName: 'Rahul Kumar',
     year: 'First Year',
     programme: 'MPC + JEE',
@@ -44,7 +44,7 @@ export const mockStudentList: StudentListRecord[] = [
   },
   {
     id: 'stu-2',
-    admissionNumber: 'SVI-2026-1002',
+    admissionNumber: 'VEI-2026-1002',
     studentName: 'Priya Sharma',
     year: 'First Year',
     programme: 'BiPC + NEET',
@@ -56,7 +56,7 @@ export const mockStudentList: StudentListRecord[] = [
   },
   {
     id: 'stu-3',
-    admissionNumber: 'SVI-2026-1003',
+    admissionNumber: 'VEI-2026-1003',
     studentName: 'Anil Reddy',
     year: 'Second Year',
     programme: 'CEC',

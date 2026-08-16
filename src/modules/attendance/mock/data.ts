@@ -1,11 +1,11 @@
 import { AttendanceSession, StudentAttendanceRecord } from '../types';
 
 export const mockStudents: StudentAttendanceRecord[] = [
-  { id: 'stu-1', rollNumber: '01', admissionNumber: 'SVI-2026-1001', studentName: 'Rahul Kumar', status: null, note: '' },
-  { id: 'stu-2', rollNumber: '02', admissionNumber: 'SVI-2026-1002', studentName: 'Priya Sharma', status: null, note: '' },
-  { id: 'stu-3', rollNumber: '03', admissionNumber: 'SVI-2026-1003', studentName: 'Anil Reddy', status: null, note: '' },
-  { id: 'stu-4', rollNumber: '04', admissionNumber: 'SVI-2026-1004', studentName: 'Kavya Singh', status: null, note: '' },
-  { id: 'stu-5', rollNumber: '05', admissionNumber: 'SVI-2026-1005', studentName: 'Siddharth Varma', status: null, note: '' },
+  { id: 'stu-1', rollNumber: '01', admissionNumber: 'VEI-2026-1001', studentName: 'Rahul Kumar', status: null, note: '' },
+  { id: 'stu-2', rollNumber: '02', admissionNumber: 'VEI-2026-1002', studentName: 'Priya Sharma', status: null, note: '' },
+  { id: 'stu-3', rollNumber: '03', admissionNumber: 'VEI-2026-1003', studentName: 'Anil Reddy', status: null, note: '' },
+  { id: 'stu-4', rollNumber: '04', admissionNumber: 'VEI-2026-1004', studentName: 'Kavya Singh', status: null, note: '' },
+  { id: 'stu-5', rollNumber: '05', admissionNumber: 'VEI-2026-1005', studentName: 'Siddharth Varma', status: null, note: '' },
 ];
 
 export const mockHistory: AttendanceSession[] = [

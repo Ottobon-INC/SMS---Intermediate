@@ -35,18 +35,18 @@ import {
   StudentExamRecord,
 } from '@/src/types';
 
-export const INSTITUTION_ID = 'inst-svic-01';
+export const INSTITUTION_ID = 'inst-vei-01';
 export const BRANCH_ID = 'branch-hyd-main';
 export const ACADEMIC_YEAR_ID = 'ay-2026-2027';
 
 export const seedInstitution: Institution = {
   id: INSTITUTION_ID,
-  code: 'SVIC',
-  name: 'Sri Vignan Intermediate College',
+  code: 'VEI',
+  name: 'Vaagdevi Educational Institutions',
   board: 'Board of Intermediate Education',
   address: '12-3, Knowledge Park Road, Hyderabad, Telangana',
   phone: '+91 90000 10000',
-  email: 'office@svic-demo.in',
+  email: 'office@vaagdevi-demo.in',
   logoUrl: 'https://images.unsplash.com/photo-1562774053-701939374585?w=120&auto=format&fit=crop&q=80',
   status: 'ACTIVE',
 };
@@ -276,7 +276,7 @@ export const seedStudents: Student[] = studentNames.map((s, i) => {
   return {
     id: `student-${idx}`,
     institutionId: INSTITUTION_ID,
-    admissionNumber: `SVI-2026-10${numStr}`,
+    admissionNumber: `VEI-2026-10${numStr}`,
     firstName: s.first,
     lastName: s.last,
     gender: s.gender as 'Male' | 'Female',
@@ -396,7 +396,7 @@ export const seedFeePayments: FeePayment[] = [
     paymentDate: '2026-08-06',
     paymentMode: 'UPI',
     referenceNumber: 'UPI/623100829101',
-    receiptNumber: 'SVI-2026-00125',
+    receiptNumber: 'VEI-2026-00125',
     notes: 'Advance tuition payment via PhonePe',
     recordedBy: 'user-office',
     createdAt: '2026-08-06T11:20:00Z',
@@ -411,7 +411,7 @@ export const seedFeePayments: FeePayment[] = [
     paymentDate: '2026-06-10',
     paymentMode: 'Cash',
     referenceNumber: 'CASH-1002',
-    receiptNumber: 'SVI-2026-00088',
+    receiptNumber: 'VEI-2026-00088',
     notes: 'Initial admission cash payment',
     recordedBy: 'user-office',
     createdAt: '2026-06-10T09:30:00Z',
@@ -426,7 +426,7 @@ export const seedFeePayments: FeePayment[] = [
     paymentDate: '2026-06-12',
     paymentMode: 'Bank Transfer',
     referenceNumber: 'NEFT/SBN8291029',
-    receiptNumber: 'SVI-2026-00092',
+    receiptNumber: 'VEI-2026-00092',
     notes: 'Full fee cleared via SBI net banking',
     recordedBy: 'user-office',
     createdAt: '2026-06-12T14:15:00Z',
@@ -755,7 +755,7 @@ export const seedNotificationEvents: NotificationEvent[] = [
     sourceRecordId: 'att-sess-3',
     eventType: 'ATTENDANCE_ABSENCE',
     recipientMobile: '+91 90000 20001',
-    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nRavi Kumar was marked absent on 1 Aug 2026 at Sri Vignan Intermediate College, Main Campus.\n\nPlease contact the college office if clarification is required.',
+    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nRavi Kumar was marked absent on 1 Aug 2026 at Vaagdevi Educational Institutions, Main Campus.\n\nPlease contact the college office if clarification is required.',
     status: 'DELIVERED',
     providerMessageId: 'WA-MSG-88192031',
     createdAt: '2026-08-01T10:05:00Z',
@@ -773,7 +773,7 @@ export const seedNotificationEvents: NotificationEvent[] = [
     sourceRecordId: 'pay-1',
     eventType: 'PAYMENT_CONFIRMATION',
     recipientMobile: '+91 90000 20001',
-    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nA payment of ₹10,000 has been recorded for Ravi Kumar on 6 Aug 2026.\n\nReceipt: SVI-2026-00125\nRemaining balance: ₹12,500\n\nRegards,\nSri Vignan Intermediate College',
+    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nA payment of ₹10,000 has been recorded for Ravi Kumar on 6 Aug 2026.\n\nReceipt: VEI-2026-00125\nRemaining balance: ₹12,500\n\nRegards,\nVaagdevi Educational Institutions',
     status: 'DELIVERED',
     providerMessageId: 'WA-MSG-88192099',
     createdAt: '2026-08-06T11:21:00Z',
@@ -791,7 +791,7 @@ export const seedNotificationEvents: NotificationEvent[] = [
     sourceRecordId: 'feeassign-1',
     eventType: 'FEE_DUE_REMINDER',
     recipientMobile: '+91 90000 20001',
-    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nAn outstanding fee amount of ₹12,500 for Ravi Kumar is due on 15 Aug 2026.\n\nRegards,\nSri Vignan Intermediate College',
+    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nAn outstanding fee amount of ₹12,500 for Ravi Kumar is due on 15 Aug 2026.\n\nRegards,\nVaagdevi Educational Institutions',
     status: 'QUEUED',
     createdAt: '2026-08-06T09:00:00Z',
     retryCount: 0,
@@ -806,7 +806,7 @@ export const seedNotificationEvents: NotificationEvent[] = [
     sourceRecordId: 'respub-1',
     eventType: 'EXAM_RESULT_PUBLISHED',
     recipientMobile: '+91 90000 20001',
-    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nThe result for Ravi Kumar in Monthly Test 1 has been published.\n\nTotal: 316 / 400\nPercentage: 79%\nResult: Pass\n\nRegards,\nSri Vignan Intermediate College',
+    resolvedMessage: 'Dear Mrs. Lakshmi,\n\nThe result for Ravi Kumar in Monthly Test 1 has been published.\n\nTotal: 316 / 400\nPercentage: 79%\nResult: Pass\n\nRegards,\nVaagdevi Educational Institutions',
     status: 'DELIVERED',
     providerMessageId: 'WA-MSG-88191110',
     createdAt: '2026-07-28T12:01:00Z',
@@ -824,7 +824,7 @@ export const seedNotificationEvents: NotificationEvent[] = [
     sourceRecordId: 'att-sess-7',
     eventType: 'ATTENDANCE_ABSENCE',
     recipientMobile: '+91 90000 20003',
-    resolvedMessage: 'Dear Mr. Ramesh Teja,\n\nArun Teja was marked absent on 6 Aug 2026 at Sri Vignan Intermediate College, Main Campus.',
+    resolvedMessage: 'Dear Mr. Ramesh Teja,\n\nArun Teja was marked absent on 6 Aug 2026 at Vaagdevi Educational Institutions, Main Campus.',
     status: 'FAILED',
     failureReason: 'Carrier network timeout or invalid recipient route',
     createdAt: '2026-08-06T10:05:00Z',
@@ -856,7 +856,7 @@ export const seedAuditEvents: AuditEvent[] = [
     recordType: 'FeePayment',
     recordId: 'pay-1',
     newStatus: 'PAID',
-    reason: 'UPI payment recorded receipt SVI-2026-00125',
+    reason: 'UPI payment recorded receipt VEI-2026-00125',
     createdAt: '2026-08-06T11:20:00Z',
   },
   {

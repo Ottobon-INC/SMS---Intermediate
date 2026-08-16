@@ -96,7 +96,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
           <h2 className="text-xl font-bold text-slate-900">{getPortalTitle()}</h2>
           <p className="text-xs text-slate-500">
-            Sri Vignan Intermediate College Platform
+            Vaagdevi Educational Institutions Platform
           </p>
         </div>
 

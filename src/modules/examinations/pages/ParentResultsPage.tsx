@@ -20,7 +20,7 @@ export const ParentResultsPage: React.FC = () => {
             <GraduationCap className="w-6 h-6 text-indigo-600" /> Published Academic Report Cards
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Child: <strong>Ravi Kumar</strong> (SVI-2026-1001) • Class: <strong>MPC-A First Year</strong>
+            Child: <strong>Ravi Kumar</strong> (VEI-2026-1001) • Class: <strong>MPC-A First Year</strong>
           </p>
         </div>
 
@@ -142,7 +142,7 @@ export const ParentResultsPage: React.FC = () => {
         <div className="bg-emerald-950/90 p-4 rounded-2xl border border-emerald-800 text-xs font-sans shadow-inner">
           <div className="bg-emerald-900/90 text-emerald-50 p-3.5 rounded-2xl border border-emerald-700/50 space-y-2 whitespace-pre-wrap font-mono leading-relaxed text-[11px]">
             {relatedNotif?.resolvedMessage ||
-              `Dear Parent,\n\nThe result for Ravi Kumar in Monthly Test 1 has been published.\n\n📊 Marks Breakdown:\n• Maths: 88/100\n• Physics: 76/100\n• Chemistry: 72/100\n• English: 80/100\n\n🏆 Total: 316 / 400 (79%)\nStatus: PASS ✅\n\nView full digital report card in SVIC Parent Portal.\n\nRegards,\nSri Vignan Intermediate College`}
+              `Dear Parent,\n\nThe result for Ravi Kumar in Monthly Test 1 has been published.\n\n📊 Marks Breakdown:\n• Maths: 88/100\n• Physics: 76/100\n• Chemistry: 72/100\n• English: 80/100\n\n🏆 Total: 316 / 400 (79%)\nStatus: PASS ✅\n\nView full digital report card in VEI Parent Portal.\n\nRegards,\nVaagdevi Educational Institutions`}
             <div className="flex justify-end items-center gap-1 text-[9px] text-emerald-300 font-mono mt-1">
               <span>Today at 02:15 PM</span>
               <span className="text-teal-300 font-bold">✓✓ Read</span>

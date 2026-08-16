@@ -52,7 +52,7 @@ export const DemoUtilities: React.FC<{ onNavigateToImport?: () => void }> = ({ o
 
     const sampleRows = [
       [
-        'SVI-2026-1001',
+        'VEI-2026-1001',
         'Ravi',
         'Kumar',
         'Male',
@@ -72,7 +72,7 @@ export const DemoUtilities: React.FC<{ onNavigateToImport?: () => void }> = ({ o
         'ACTIVE',
       ],
       [
-        'SVI-2026-1002',
+        'VEI-2026-1002',
         'Priya',
         'Sharma',
         'Female',
@@ -92,7 +92,7 @@ export const DemoUtilities: React.FC<{ onNavigateToImport?: () => void }> = ({ o
         'ACTIVE',
       ],
       [
-        'SVI-2026-1003',
+        'VEI-2026-1003',
         'Arun',
         'Teja',
         'Male',

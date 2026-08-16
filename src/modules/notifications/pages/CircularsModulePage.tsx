@@ -35,7 +35,7 @@ export const CircularsModulePage: React.FC = () => {
     if (!canPublish) return;
     const newCirc: Circular = {
       id: `circ-${Date.now()}`,
-      institutionId: currentUser?.institutionId || 'inst-svic-01',
+      institutionId: currentUser?.institutionId || 'inst-vei-01',
       branchId: currentUser?.branchId || 'branch-hyd-main',
       title,
       category,
@@ -50,12 +50,12 @@ export const CircularsModulePage: React.FC = () => {
 
     NotificationsService.addCircular(newCirc);
 
-    const waMsg = `Dear Parent,\n\n${title}\n\n${message}\n\nRegards,\nSri Vignan Intermediate College`;
+    const waMsg = `Dear Parent,\n\n${title}\n\n${message}\n\nRegards,\nVaagdevi Educational Institutions`;
 
     // Enqueue broadcast notification
     NotificationsService.addNotificationEvent({
       id: `notif-${Date.now()}`,
-      institutionId: currentUser?.institutionId || 'inst-svic-01',
+      institutionId: currentUser?.institutionId || 'inst-vei-01',
       branchId: currentUser?.branchId || 'branch-hyd-main',
       studentId: 'student-1',
       guardianId: 'guard-1',

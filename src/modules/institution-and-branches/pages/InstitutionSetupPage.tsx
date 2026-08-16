@@ -382,7 +382,7 @@ export const InstitutionSetupPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. SVIC - Gachibowli Campus"
+                  placeholder="e.g. VEI - Gachibowli Campus"
                   value={branchName}
                   onChange={(e) => setBranchName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -395,7 +395,7 @@ export const InstitutionSetupPage: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. SVIC-GC"
+                    placeholder="e.g. VEI-GC"
                     value={branchCode}
                     onChange={(e) => setBranchCode(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono"

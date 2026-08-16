@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({ title, onOpenMobileMenu }) => {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold tracking-tight text-white text-base lg:text-lg">
-                Sri Vignan Intermediate College
+                Vaagdevi Educational Institutions
               </span>
               <span className="hidden sm:inline-block bg-teal-900/60 text-teal-300 text-[10px] font-bold px-2 py-0.5 rounded border border-teal-700/60">
                 {currentUser?.branchId === 'branch-vja-city'

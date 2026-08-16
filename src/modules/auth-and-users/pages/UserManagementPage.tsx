@@ -65,7 +65,7 @@ export const UserManagementPage: React.FC = () => {
       const userBranchId = isDean ? selectedBranchId : (currentUser?.branchId || 'branch-hyd-main');
       const newUser: User = {
         id: `user-${Date.now()}`,
-        institutionId: currentUser?.institutionId || 'inst-svic-01',
+        institutionId: currentUser?.institutionId || 'inst-vei-01',
         branchId: userBranchId,
         fullName,
         email,
